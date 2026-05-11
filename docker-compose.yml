@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: adgs_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: adgs_user
+      POSTGRES_PASSWORD: adgs_password
+      POSTGRES_DB: adgs_db
+    ports:
+      - "15432:5432"
+    volumes:
+      - adgs_postgres_data:/var/lib/postgresql/data
+    networks:
+      - adgs_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adgs_user -d adgs_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: adgs_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - adgs_network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: adgs_qdrant
+    restart: unless-stopped
+    ports:
+    - "127.0.0.1:16333:6333"
+    - "127.0.0.1:16334:6334"
+    volumes:
+      - adgs_qdrant_data:/qdrant/storage
+    networks:
+      - adgs_network
+
+volumes:
+  adgs_postgres_data:
+  adgs_qdrant_data:
+
+networks:
+  adgs_network:
+    driver: bridge
