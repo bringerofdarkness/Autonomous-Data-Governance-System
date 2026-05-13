@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 from typing import Any
 
+from docx import Document
 from pypdf import PdfReader
 
 from app.core.config import get_settings
@@ -10,6 +11,7 @@ settings = get_settings()
 
 SUPPORTED_TEXT_EXTENSIONS = {".txt"}
 SUPPORTED_PDF_EXTENSIONS = {".pdf"}
+SUPPORTED_DOCX_EXTENSIONS = {".docx"}
 
 
 def _extract_txt_text(file_path: Path) -> dict[str, Any]:
@@ -62,6 +64,46 @@ def _extract_pdf_text(file_path: Path) -> dict[str, Any]:
     }
 
 
+def _extract_docx_text(file_path: Path) -> dict[str, Any]:
+    document = Document(str(file_path))
+
+    paragraph_texts = [
+        paragraph.text.strip()
+        for paragraph in document.paragraphs
+        if paragraph.text and paragraph.text.strip()
+    ]
+
+    table_texts: list[str] = []
+
+    for table in document.tables:
+        for row in table.rows:
+            row_values = [
+                cell.text.strip()
+                for cell in row.cells
+                if cell.text and cell.text.strip()
+            ]
+
+            if row_values:
+                table_texts.append(" | ".join(row_values))
+
+    extracted_text = "\n".join(paragraph_texts + table_texts).strip()
+
+    if not extracted_text:
+        raise ValueError("No extractable text found in DOCX document.")
+
+    return {
+        "extraction_method": "python_docx_text",
+        "text": extracted_text,
+        "metadata": {
+            "char_count": len(extracted_text),
+            "file_size_bytes": file_path.stat().st_size,
+            "paragraph_count": len(paragraph_texts),
+            "table_count": len(document.tables),
+        },
+        "warnings": [],
+    }
+
+
 def extract_document_text(stored_filename: str) -> dict[str, Any]:
     if not stored_filename:
         raise ValueError("stored_filename is missing.")
@@ -77,9 +119,11 @@ def extract_document_text(stored_filename: str) -> dict[str, Any]:
         extraction_result = _extract_txt_text(file_path)
     elif file_extension in SUPPORTED_PDF_EXTENSIONS:
         extraction_result = _extract_pdf_text(file_path)
+    elif file_extension in SUPPORTED_DOCX_EXTENSIONS:
+        extraction_result = _extract_docx_text(file_path)
     else:
         raise ValueError(
-            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf"
+            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx"
         )
 
     return {
