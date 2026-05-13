@@ -1,4 +1,6 @@
-﻿from pathlib import Path
+﻿import csv
+
+from pathlib import Path
 from typing import Any
 
 from docx import Document
@@ -12,6 +14,7 @@ settings = get_settings()
 SUPPORTED_TEXT_EXTENSIONS = {".txt"}
 SUPPORTED_PDF_EXTENSIONS = {".pdf"}
 SUPPORTED_DOCX_EXTENSIONS = {".docx"}
+SUPPORTED_CSV_EXTENSIONS = {".csv"}
 
 
 def _extract_txt_text(file_path: Path) -> dict[str, Any]:
@@ -103,6 +106,64 @@ def _extract_docx_text(file_path: Path) -> dict[str, Any]:
         "warnings": [],
     }
 
+def _extract_csv_text(file_path: Path) -> dict[str, Any]:
+    rows: list[list[str]] = []
+
+    try:
+       with file_path.open("r", encoding="utf-8-sig", newline="") as csv_file:
+            reader = csv.reader(csv_file)
+
+            for row in reader:
+                cleaned_row = [
+                    cell.strip()
+                    for cell in row
+                ]
+                rows.append(cleaned_row)
+
+    except UnicodeDecodeError as exc:
+        raise ValueError("Only UTF-8 or UTF-8-BOM CSV files are currently supported.") from exc
+
+    if not rows:
+        raise ValueError("No rows found in CSV file.")
+
+    header = rows[0]
+    data_rows = rows[1:]
+
+    text_lines = [
+        "ADGS CSV Extracted Document",
+        f"Columns: {', '.join(header)}",
+        "",
+        "Rows:",
+    ]
+
+    for row_index, row in enumerate(data_rows, start=1):
+        row_pairs = []
+
+        for column_index, cell in enumerate(row):
+            column_name = (
+                header[column_index]
+                if column_index < len(header)
+                else f"column_{column_index + 1}"
+            )
+            row_pairs.append(f"{column_name}: {cell}")
+
+        text_lines.append(f"Row {row_index}: " + " | ".join(row_pairs))
+
+    extracted_text = "\n".join(text_lines).strip()
+
+    return {
+        "extraction_method": "csv_text",
+        "text": extracted_text,
+        "metadata": {
+            "char_count": len(extracted_text),
+            "file_size_bytes": file_path.stat().st_size,
+            "row_count": len(data_rows),
+            "column_count": len(header),
+            "columns": header,
+        },
+        "warnings": [],
+    }
+
 
 def extract_document_text(stored_filename: str) -> dict[str, Any]:
     if not stored_filename:
@@ -121,9 +182,11 @@ def extract_document_text(stored_filename: str) -> dict[str, Any]:
         extraction_result = _extract_pdf_text(file_path)
     elif file_extension in SUPPORTED_DOCX_EXTENSIONS:
         extraction_result = _extract_docx_text(file_path)
+    elif file_extension in SUPPORTED_CSV_EXTENSIONS:
+        extraction_result = _extract_csv_text(file_path)
     else:
         raise ValueError(
-            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx"
+            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx, .csv"
         )
 
     return {
