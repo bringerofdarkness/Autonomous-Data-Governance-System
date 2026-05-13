@@ -3,6 +3,10 @@
 from pathlib import Path
 from typing import Any
 
+from datetime import date, datetime
+
+from openpyxl import load_workbook
+
 from docx import Document
 from pypdf import PdfReader
 
@@ -15,6 +19,7 @@ SUPPORTED_TEXT_EXTENSIONS = {".txt"}
 SUPPORTED_PDF_EXTENSIONS = {".pdf"}
 SUPPORTED_DOCX_EXTENSIONS = {".docx"}
 SUPPORTED_CSV_EXTENSIONS = {".csv"}
+SUPPORTED_XLSX_EXTENSIONS = {".xlsx"}
 
 
 def _extract_txt_text(file_path: Path) -> dict[str, Any]:
@@ -165,6 +170,117 @@ def _extract_csv_text(file_path: Path) -> dict[str, Any]:
     }
 
 
+def _excel_cell_to_text(value: Any) -> str:
+    if value is None:
+        return ""
+
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+
+    return str(value).strip()
+
+
+def _extract_xlsx_text(file_path: Path) -> dict[str, Any]:
+    workbook = load_workbook(
+        filename=str(file_path),
+        read_only=True,
+        data_only=True,
+    )
+
+    text_lines: list[str] = ["ADGS XLSX Extracted Document"]
+    warnings: list[str] = []
+    sheet_metadata: list[dict[str, Any]] = []
+
+    total_data_rows = 0
+
+    for worksheet in workbook.worksheets:
+        sheet_name = worksheet.title
+
+        rows = [
+            [
+                _excel_cell_to_text(cell)
+                for cell in row
+            ]
+            for row in worksheet.iter_rows(values_only=True)
+        ]
+
+        non_empty_rows = [
+            row
+            for row in rows
+            if any(cell for cell in row)
+        ]
+
+        if not non_empty_rows:
+            warnings.append(f"No extractable data found in sheet '{sheet_name}'.")
+            sheet_metadata.append(
+                {
+                    "sheet_name": sheet_name,
+                    "row_count": 0,
+                    "column_count": 0,
+                    "columns": [],
+                }
+            )
+            continue
+
+        header = non_empty_rows[0]
+        data_rows = non_empty_rows[1:]
+
+        normalized_header = [
+            column_name if column_name else f"column_{index + 1}"
+            for index, column_name in enumerate(header)
+        ]
+
+        text_lines.append("")
+        text_lines.append(f"Sheet: {sheet_name}")
+        text_lines.append(f"Columns: {', '.join(normalized_header)}")
+        text_lines.append("Rows:")
+
+        for row_index, row in enumerate(data_rows, start=1):
+            row_pairs = []
+
+            for column_index, cell in enumerate(row):
+                column_name = (
+                    normalized_header[column_index]
+                    if column_index < len(normalized_header)
+                    else f"column_{column_index + 1}"
+                )
+
+                row_pairs.append(f"{column_name}: {cell}")
+
+            text_lines.append(f"Row {row_index}: " + " | ".join(row_pairs))
+
+        total_data_rows += len(data_rows)
+
+        sheet_metadata.append(
+            {
+                "sheet_name": sheet_name,
+                "row_count": len(data_rows),
+                "column_count": len(normalized_header),
+                "columns": normalized_header,
+            }
+        )
+
+    workbook.close()
+
+    extracted_text = "\n".join(text_lines).strip()
+
+    if not extracted_text or extracted_text == "ADGS XLSX Extracted Document":
+        raise ValueError("No extractable text found in XLSX file.")
+
+    return {
+        "extraction_method": "openpyxl_xlsx_text",
+        "text": extracted_text,
+        "metadata": {
+            "char_count": len(extracted_text),
+            "file_size_bytes": file_path.stat().st_size,
+            "sheet_count": len(sheet_metadata),
+            "total_data_rows": total_data_rows,
+            "sheets": sheet_metadata,
+        },
+        "warnings": warnings,
+    }
+
+
 def extract_document_text(stored_filename: str) -> dict[str, Any]:
     if not stored_filename:
         raise ValueError("stored_filename is missing.")
@@ -184,9 +300,11 @@ def extract_document_text(stored_filename: str) -> dict[str, Any]:
         extraction_result = _extract_docx_text(file_path)
     elif file_extension in SUPPORTED_CSV_EXTENSIONS:
         extraction_result = _extract_csv_text(file_path)
+    elif file_extension in SUPPORTED_XLSX_EXTENSIONS:
+        extraction_result = _extract_xlsx_text(file_path)
     else:
         raise ValueError(
-            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx, .csv"
+            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx, .csv, .xlsx"
         )
 
     return {
