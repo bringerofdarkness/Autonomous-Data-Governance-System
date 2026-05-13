@@ -1003,6 +1003,38 @@ async def list_documents(
         default=None,
         description="Filter documents by detected category.",
     ),
+    min_risk_score: int | None = Query(
+        default=None,
+        ge=0,
+        le=100,
+        description="Return documents with risk score greater than or equal to this value.",
+    ),
+    max_risk_score: int | None = Query(
+        default=None,
+        ge=0,
+        le=100,
+        description="Return documents with risk score less than or equal to this value.",
+    ),
+    conflict_found: bool | None = Query(
+        default=None,
+        description="Filter documents by whether a conflict was found.",
+    ),
+    indexed: bool | None = Query(
+        default=None,
+        description="Filter documents by whether they were indexed into Qdrant.",
+    ),
+    uploaded_by_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter documents by uploader user ID.",
+    ),
+    created_from: datetime | None = Query(
+        default=None,
+        description="Return documents created at or after this datetime.",
+    ),
+    created_to: datetime | None = Query(
+        default=None,
+        description="Return documents created at or before this datetime.",
+    ),
     limit: int = Query(
         default=20,
         ge=1,
@@ -1021,7 +1053,33 @@ async def list_documents(
         query = query.where(DocumentMetadata.status == document_status)
 
     if document_category is not None:
-        query = query.where(DocumentMetadata.document_category == document_category)
+        query = query.where(
+            DocumentMetadata.document_category == document_category.strip()
+        )
+
+    if min_risk_score is not None:
+        query = query.where(DocumentMetadata.risk_score >= min_risk_score)
+
+    if max_risk_score is not None:
+        query = query.where(DocumentMetadata.risk_score <= max_risk_score)
+
+    if conflict_found is not None:
+        query = query.where(DocumentMetadata.conflict_found.is_(conflict_found))
+
+    if indexed is True:
+        query = query.where(DocumentMetadata.qdrant_point_id.is_not(None))
+
+    if indexed is False:
+        query = query.where(DocumentMetadata.qdrant_point_id.is_(None))
+
+    if uploaded_by_id is not None:
+        query = query.where(DocumentMetadata.uploaded_by_id == uploaded_by_id)
+
+    if created_from is not None:
+        query = query.where(DocumentMetadata.created_at >= created_from)
+
+    if created_to is not None:
+        query = query.where(DocumentMetadata.created_at <= created_to)
 
     query = (
         query
@@ -1037,3 +1095,4 @@ async def list_documents(
         DocumentListItemResponse.model_validate(document)
         for document in documents
     ]
+
