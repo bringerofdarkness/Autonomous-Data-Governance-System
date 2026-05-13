@@ -680,4 +680,4 @@ The system is designed to safely prepare enterprise documents for future RAG app
 
 ## Author
 
-Built by [bringerofdarkness](https://github.com/bringerofdarkness)
+Built by [Md Shahrul Zakaria](https://github.com/bringerofdarkness)

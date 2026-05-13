@@ -13,6 +13,12 @@ class RagSearchRequest(BaseModel):
         le=20,
         description="Maximum number of chunk matches to return.",
     )
+    min_score: float = Field(
+        default=0.30,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score required to return a chunk match.",
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -31,5 +37,6 @@ class RagChunkMatchResponse(BaseModel):
 
 class RagSearchResponse(BaseModel):
     query: str
+    min_score: float
     matches_count: int
     matches: list[RagChunkMatchResponse]

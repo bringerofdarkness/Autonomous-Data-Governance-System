@@ -1,5 +1,5 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointIdsList, VectorParams
 
 from app.core.config import get_settings
 
@@ -178,3 +178,50 @@ def search_gold_collection_chunks(
         }
         for result in search_results
     ]
+
+
+def delete_gold_collection_points(point_ids: list[str]) -> dict:
+    if not point_ids:
+        return {
+            "deleted_count": 0,
+            "point_ids": [],
+            "collection_name": settings.QDRANT_GOLD_COLLECTION,
+            "message": "No point IDs provided.",
+        }
+
+    client = get_qdrant_client()
+
+    client.delete(
+        collection_name=settings.QDRANT_GOLD_COLLECTION,
+        points_selector=PointIdsList(points=point_ids),
+    )
+
+    return {
+        "deleted_count": len(point_ids),
+        "point_ids": point_ids,
+        "collection_name": settings.QDRANT_GOLD_COLLECTION,
+        "message": "Qdrant Gold Collection points deleted successfully.",
+    }
+
+
+def delete_gold_collection_points_for_document(document_id: str) -> dict:
+    client = get_qdrant_client()
+
+    points, _ = client.scroll(
+        collection_name=settings.QDRANT_GOLD_COLLECTION,
+        scroll_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="document_id",
+                    match=MatchValue(value=document_id),
+                ),
+            ]
+        ),
+        limit=100,
+        with_payload=True,
+        with_vectors=False,
+    )
+
+    point_ids = [str(point.id) for point in points]
+
+    return delete_gold_collection_points(point_ids)

@@ -22,7 +22,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(documents_router)
 app.include_router(system_router)
-
+app.include_router(rag_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:

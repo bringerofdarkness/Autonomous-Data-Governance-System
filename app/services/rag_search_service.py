@@ -7,6 +7,7 @@ from app.services.qdrant_service import search_gold_collection_chunks
 def search_approved_gold_chunks(
     query: str,
     limit: int = 5,
+    min_score: float = 0.30,
 ) -> dict[str, Any]:
     if not query or not query.strip():
         raise ValueError("Search query cannot be empty.")
@@ -23,6 +24,8 @@ def search_approved_gold_chunks(
 
     for result in results:
         payload = result.get("payload") or {}
+        if result["score"] < min_score:
+            continue
 
         matches.append(
             {
@@ -40,6 +43,7 @@ def search_approved_gold_chunks(
 
     return {
         "query": query,
+        "min_score": min_score,
         "matches_count": len(matches),
         "matches": matches,
     }

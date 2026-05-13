@@ -25,6 +25,7 @@ async def rag_search(
         search_result = search_approved_gold_chunks(
             query=search_request.query,
             limit=search_request.limit,
+            min_score=search_request.min_score,
         )
     except Exception as exc:
         raise HTTPException(
@@ -34,6 +35,7 @@ async def rag_search(
 
     return RagSearchResponse(
         query=search_result["query"],
+        min_score=search_result["min_score"],
         matches_count=search_result["matches_count"],
         matches=[
             RagChunkMatchResponse(**match)

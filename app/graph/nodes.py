@@ -4,6 +4,7 @@ from pathlib import Path
 
 from langgraph.types import interrupt
 
+from app.services.document_extraction_service import extract_document_text
 from app.services.pii_scrubber_service import detect_and_redact_pii
 from app.services.conflict_service import check_text_conflicts
 from app.core.config import get_settings
@@ -28,30 +29,24 @@ def text_loader_node(state: ADGSGraphState) -> ADGSGraphState:
             "error_message": "stored_filename is missing from graph state.",
         }
 
-    file_path = Path(settings.UPLOAD_DIR) / stored_filename
-
-    if not file_path.exists():
-        return {
-            **state,
-            "current_step": "FAILED",
-            "error_message": f"File not found: {file_path}",
-        }
-
     try:
-        raw_text = file_path.read_text(encoding="utf-8")
+        extraction_result = extract_document_text(stored_filename)
+        raw_text = extraction_result["text"]
 
         return {
             **state,
             "raw_text": raw_text,
+            "extraction_metadata": extraction_result["metadata"],
+            "extraction_method": extraction_result["extraction_method"],
             "current_step": "TEXT_EXTRACTED",
             "error_message": None,
         }
 
-    except UnicodeDecodeError:
+    except Exception as exc:
         return {
             **state,
             "current_step": "FAILED",
-            "error_message": "Only UTF-8 text files are supported in this Phase 3 test.",
+            "error_message": f"Document extraction failed: {exc}",
         }
 
 
