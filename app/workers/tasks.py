@@ -5,6 +5,8 @@ from typing import Any
 
 from sqlalchemy import select
 
+
+from app.services.governance_risk_service import calculate_governance_risk
 from app.services.structured_profile_service import build_structured_profile
 from app.db.worker_session import WorkerAsyncSessionLocal
 from app.graph.workflow import build_adgs_graph
@@ -110,12 +112,21 @@ async def _process_document(document_id: str) -> dict[str, str]:
                         document_id=str(document.id),
                         cleaned_text=cleaned_text,
                     )
+
                     document.cleaned_text_filename = cleaned_text_filename
+                    document.document_category = paused_state.get("document_category")
 
-                document.document_category = paused_state.get("document_category")
-                document.risk_score = min(len(detected_pii) * 25, 100)
+                    risk_result = calculate_governance_risk(
+                        detected_pii=detected_pii,
+                        conflict_found=paused_state.get("conflict_found", False),
+                        structured_profile=structured_profile,
+                        extraction_method=extraction_method,
+                    )
 
-                document.conflict_found = paused_state.get("conflict_found", False)
+                    document.risk_score = risk_result["risk_score"]
+
+                    document.conflict_found = paused_state.get("conflict_found", False)
+                
                 document.conflict_summary = paused_state.get("conflict_summary")
                 document.conflict_checked_at = datetime.now(timezone.utc)
 
@@ -138,6 +149,7 @@ async def _process_document(document_id: str) -> dict[str, str]:
                         "extraction_method": extraction_method,
                         "extraction_metadata": extraction_metadata,
                         "structured_profile": structured_profile,
+                        "risk_result": risk_result,
                     },
                 )
 
@@ -232,10 +244,20 @@ async def _process_document(document_id: str) -> dict[str, str]:
                 )
                 document.cleaned_text_filename = cleaned_text_filename
 
-            document.document_category = graph_result.get("document_category")
-            document.risk_score = min(len(detected_pii) * 25, 100)
+                document.document_category = graph_result.get("document_category")
 
-            document.conflict_found = graph_result.get("conflict_found", False)
+                risk_result = calculate_governance_risk(
+                    detected_pii=detected_pii,
+                    conflict_found=graph_result.get("conflict_found", False),
+                    structured_profile=structured_profile,
+                    extraction_method=extraction_method,
+                )
+
+                document.risk_score = risk_result["risk_score"]
+
+                document.conflict_found = graph_result.get("conflict_found", False)
+
+
             document.conflict_summary = graph_result.get("conflict_summary")
             document.conflict_checked_at = datetime.now(timezone.utc)
 
@@ -255,6 +277,7 @@ async def _process_document(document_id: str) -> dict[str, str]:
                     "extraction_method": extraction_method,
                     "extraction_metadata": extraction_metadata,
                     "structured_profile": structured_profile,
+                    "risk_result": risk_result,
                 },
             )
 
