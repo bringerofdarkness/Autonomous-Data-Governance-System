@@ -1,4 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+
+import uuid
+from datetime import datetime
+
+
+
+from fastapi import APIRouter, Depends, HTTPException,Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import desc, select
@@ -92,6 +98,80 @@ async def list_rag_search_audit_logs(
         .offset(offset)
     )
 
+    logs = result.scalars().all()
+
+    return [
+        RagSearchAuditLogResponse.model_validate(log)
+        for log in logs
+    ]
+
+@router.get(
+    "/audit-logs",
+    response_model=list[RagSearchAuditLogResponse],
+)
+async def list_rag_search_audit_logs(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["Admin"])),
+    actor_user_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter RAG audit logs by user ID.",
+    ),
+    query_contains: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=200,
+        description="Filter RAG audit logs where the query contains this text.",
+    ),
+    date_from: datetime | None = Query(
+        default=None,
+        description="Return logs created at or after this datetime.",
+    ),
+    date_to: datetime | None = Query(
+        default=None,
+        description="Return logs created at or before this datetime.",
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of RAG audit logs to return.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of RAG audit logs to skip.",
+    ),
+) -> list[RagSearchAuditLogResponse]:
+    query_stmt = select(RagSearchAuditLog)
+
+    if actor_user_id is not None:
+        query_stmt = query_stmt.where(
+            RagSearchAuditLog.actor_user_id == actor_user_id
+        )
+
+    if query_contains:
+        query_stmt = query_stmt.where(
+            RagSearchAuditLog.query.ilike(f"%{query_contains.strip()}%")
+        )
+
+    if date_from is not None:
+        query_stmt = query_stmt.where(
+            RagSearchAuditLog.created_at >= date_from
+        )
+
+    if date_to is not None:
+        query_stmt = query_stmt.where(
+            RagSearchAuditLog.created_at <= date_to
+        )
+
+    query_stmt = (
+        query_stmt
+        .order_by(desc(RagSearchAuditLog.created_at))
+        .limit(limit)
+        .offset(offset)
+    )
+
+    result = await db.execute(query_stmt)
     logs = result.scalars().all()
 
     return [
