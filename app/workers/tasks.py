@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import select
 
+from app.services.structured_profile_service import build_structured_profile
 from app.db.worker_session import WorkerAsyncSessionLocal
 from app.graph.workflow import build_adgs_graph
 from app.models.document_metadata import DocumentMetadata, DocumentStatus
@@ -97,6 +98,12 @@ async def _process_document(document_id: str) -> dict[str, str]:
                 extraction_metadata = paused_state.get("extraction_metadata", {})
                 extraction_method = paused_state.get("extraction_method")
 
+                structured_profile = build_structured_profile(
+                    extraction_method=extraction_method,
+                    extraction_metadata=extraction_metadata,
+                    extracted_text=paused_state.get("raw_text"),
+                )
+
                 cleaned_text = paused_state.get("cleaned_text")
                 if cleaned_text and not document.cleaned_text_filename:
                     cleaned_text_filename = save_cleaned_text(
@@ -130,6 +137,7 @@ async def _process_document(document_id: str) -> dict[str, str]:
                         "cleaned_text_filename": document.cleaned_text_filename,
                         "extraction_method": extraction_method,
                         "extraction_metadata": extraction_metadata,
+                        "structured_profile": structured_profile,
                     },
                 )
 
@@ -210,6 +218,12 @@ async def _process_document(document_id: str) -> dict[str, str]:
             extraction_metadata = graph_result.get("extraction_metadata", {})
             extraction_method = graph_result.get("extraction_method")
 
+            structured_profile = build_structured_profile(
+                extraction_method=extraction_method,
+                extraction_metadata=extraction_metadata,
+                extracted_text=graph_result.get("raw_text"),
+            )
+
             cleaned_text = graph_result.get("cleaned_text")
             if cleaned_text:
                 cleaned_text_filename = save_cleaned_text(
@@ -240,6 +254,7 @@ async def _process_document(document_id: str) -> dict[str, str]:
                     "cleaned_text_filename": document.cleaned_text_filename,
                     "extraction_method": extraction_method,
                     "extraction_metadata": extraction_metadata,
+                    "structured_profile": structured_profile,
                 },
             )
 
