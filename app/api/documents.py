@@ -905,6 +905,35 @@ async def get_document_audit_logs(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles(["Admin", "Editor", "Viewer"])),
+    action: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description="Filter document audit logs by action.",
+    ),
+    actor_user_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter document audit logs by actor user ID.",
+    ),
+    date_from: datetime | None = Query(
+        default=None,
+        description="Return logs created at or after this datetime.",
+    ),
+    date_to: datetime | None = Query(
+        default=None,
+        description="Return logs created at or before this datetime.",
+    ),
+    limit: int = Query(
+        default=50,
+        ge=1,
+        le=200,
+        description="Maximum number of document audit logs to return.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of document audit logs to skip.",
+    ),
 ) -> list[DocumentAuditLogResponse]:
     document_result = await db.execute(
         select(DocumentMetadata).where(DocumentMetadata.id == document_id)
@@ -917,17 +946,46 @@ async def get_document_audit_logs(
             detail="Document not found.",
         )
 
-    logs_result = await db.execute(
-        select(DocumentAuditLog)
-        .where(DocumentAuditLog.document_id == document_id)
-        .order_by(DocumentAuditLog.created_at.desc())
+    query_stmt = select(DocumentAuditLog).where(
+        DocumentAuditLog.document_id == document_id
     )
+
+    if action:
+        query_stmt = query_stmt.where(
+            DocumentAuditLog.action == action.strip()
+        )
+
+    if actor_user_id is not None:
+        query_stmt = query_stmt.where(
+            DocumentAuditLog.actor_user_id == actor_user_id
+        )
+
+    if date_from is not None:
+        query_stmt = query_stmt.where(
+            DocumentAuditLog.created_at >= date_from
+        )
+
+    if date_to is not None:
+        query_stmt = query_stmt.where(
+            DocumentAuditLog.created_at <= date_to
+        )
+
+    query_stmt = (
+        query_stmt
+        .order_by(DocumentAuditLog.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    logs_result = await db.execute(query_stmt)
     audit_logs = logs_result.scalars().all()
 
     return [
         DocumentAuditLogResponse.model_validate(log)
         for log in audit_logs
     ]
+
+
 
 @router.get(
     "",
