@@ -18,9 +18,11 @@ EMPLOYEE_ID_PATTERN = re.compile(
 LABELLED_PERSON_NAME_PATTERN = re.compile(
     r"\b(?P<label>"
     r"Employee Name|Customer Name|Client Name|User Name|Full Name|"
-    r"Contact Person|Contact person|Person Name"
+    r"Contact Person|Contact person|Person Name|"
+    r"(?:[A-Za-z0-9_]+\.)*(?:name|full_name|person_name|employee_name|customer_name|client_name)"
     r")\s*:\s*"
-    r"(?P<name>[A-Z][A-Za-z'.-]+(?:[ \t]+[A-Z][A-Za-z'.-]+){0,3})"
+    r"(?P<name>[A-Z][A-Za-z'.-]+(?:[ \t]+[A-Z][A-Za-z'.-]+){0,3})",
+    re.IGNORECASE,
 )
 
 

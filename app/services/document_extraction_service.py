@@ -1,4 +1,5 @@
 ﻿import csv
+import json
 
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ SUPPORTED_PDF_EXTENSIONS = {".pdf"}
 SUPPORTED_DOCX_EXTENSIONS = {".docx"}
 SUPPORTED_CSV_EXTENSIONS = {".csv"}
 SUPPORTED_XLSX_EXTENSIONS = {".xlsx"}
+SUPPORTED_JSON_EXTENSIONS = {".json"}
 
 
 def _extract_txt_text(file_path: Path) -> dict[str, Any]:
@@ -280,6 +282,96 @@ def _extract_xlsx_text(file_path: Path) -> dict[str, Any]:
         "warnings": warnings,
     }
 
+def _flatten_json_value(value: Any, prefix: str = "") -> list[str]:
+    lines: list[str] = []
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            next_prefix = f"{prefix}.{key}" if prefix else str(key)
+            lines.extend(_flatten_json_value(item, next_prefix))
+
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            next_prefix = f"{prefix}[{index}]"
+            lines.extend(_flatten_json_value(item, next_prefix))
+
+    else:
+        display_value = "" if value is None else str(value)
+        lines.append(f"{prefix}: {display_value}")
+
+    return lines
+
+
+def _count_json_keys(value: Any) -> int:
+    if isinstance(value, dict):
+        return len(value) + sum(_count_json_keys(item) for item in value.values())
+
+    if isinstance(value, list):
+        return sum(_count_json_keys(item) for item in value)
+
+    return 0
+
+
+def _get_json_max_depth(value: Any, current_depth: int = 0) -> int:
+    if isinstance(value, dict):
+        if not value:
+            return current_depth
+
+        return max(
+            _get_json_max_depth(item, current_depth + 1)
+            for item in value.values()
+        )
+
+    if isinstance(value, list):
+        if not value:
+            return current_depth
+
+        return max(
+            _get_json_max_depth(item, current_depth + 1)
+            for item in value
+        )
+
+    return current_depth
+
+
+def _extract_json_text(file_path: Path) -> dict[str, Any]:
+    try:
+        with file_path.open("r", encoding="utf-8-sig") as json_file:
+            json_data = json.load(json_file)
+
+    except UnicodeDecodeError as exc:
+        raise ValueError("Only UTF-8 or UTF-8-BOM JSON files are currently supported.") from exc
+
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON file: {exc}") from exc
+
+    flattened_lines = _flatten_json_value(json_data)
+
+    if not flattened_lines:
+        raise ValueError("No extractable data found in JSON file.")
+
+    text_lines = [
+        "ADGS JSON Extracted Document",
+        "",
+        "Fields:",
+        *flattened_lines,
+    ]
+
+    extracted_text = "\n".join(text_lines).strip()
+
+    return {
+        "extraction_method": "json_text",
+        "text": extracted_text,
+        "metadata": {
+            "char_count": len(extracted_text),
+            "file_size_bytes": file_path.stat().st_size,
+            "top_level_type": type(json_data).__name__,
+            "key_count": _count_json_keys(json_data),
+            "max_depth": _get_json_max_depth(json_data),
+        },
+        "warnings": [],
+    }
+
 
 def extract_document_text(stored_filename: str) -> dict[str, Any]:
     if not stored_filename:
@@ -302,9 +394,11 @@ def extract_document_text(stored_filename: str) -> dict[str, Any]:
         extraction_result = _extract_csv_text(file_path)
     elif file_extension in SUPPORTED_XLSX_EXTENSIONS:
         extraction_result = _extract_xlsx_text(file_path)
+    elif file_extension in SUPPORTED_JSON_EXTENSIONS:
+        extraction_result = _extract_json_text(file_path)
     else:
         raise ValueError(
-            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx, .csv, .xlsx"
+            f"Unsupported file type '{file_extension}'. Currently supported: .txt, .pdf, .docx, .csv, .xlsx, .json"
         )
 
     return {
