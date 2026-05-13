@@ -94,6 +94,9 @@ async def _process_document(document_id: str) -> dict[str, str]:
                 detected_pii = paused_state.get("detected_pii", [])
                 pii_summary = summarize_pii(detected_pii)
 
+                extraction_metadata = paused_state.get("extraction_metadata", {})
+                extraction_method = paused_state.get("extraction_method")
+
                 cleaned_text = paused_state.get("cleaned_text")
                 if cleaned_text and not document.cleaned_text_filename:
                     cleaned_text_filename = save_cleaned_text(
@@ -125,6 +128,8 @@ async def _process_document(document_id: str) -> dict[str, str]:
                         "risk_score": document.risk_score,
                         "pii_summary": pii_summary,
                         "cleaned_text_filename": document.cleaned_text_filename,
+                        "extraction_method": extraction_method,
+                        "extraction_metadata": extraction_metadata,
                     },
                 )
 
@@ -202,6 +207,9 @@ async def _process_document(document_id: str) -> dict[str, str]:
             detected_pii = graph_result.get("detected_pii", [])
             pii_summary = summarize_pii(detected_pii)
 
+            extraction_metadata = graph_result.get("extraction_metadata", {})
+            extraction_method = graph_result.get("extraction_method")
+
             cleaned_text = graph_result.get("cleaned_text")
             if cleaned_text:
                 cleaned_text_filename = save_cleaned_text(
@@ -230,6 +238,8 @@ async def _process_document(document_id: str) -> dict[str, str]:
                     "risk_score": document.risk_score,
                     "pii_summary": pii_summary,
                     "cleaned_text_filename": document.cleaned_text_filename,
+                    "extraction_method": extraction_method,
+                    "extraction_metadata": extraction_metadata,
                 },
             )
 

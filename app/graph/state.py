@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 
 DocumentRiskLevel = Literal["LOW", "MEDIUM", "HIGH"]
@@ -23,7 +23,11 @@ class ADGSGraphState(TypedDict, total=False):
     original_filename: str
 
     raw_text: str
-    cleaned_text: str
+    cleaned_text: str 
+    
+    extraction_method: str | None
+    extraction_metadata: dict[str, Any]
+    extraction_warnings: list[str]
 
     document_category: str | None
     detected_pii: list[dict[str, str]]
