@@ -4,6 +4,8 @@ from pathlib import Path
 
 from langgraph.types import interrupt
 
+from app.services.governance_risk_service import calculate_governance_risk
+from app.services.structured_profile_service import build_structured_profile
 from app.services.document_extraction_service import extract_document_text
 from app.services.pii_scrubber_service import detect_and_redact_pii
 from app.services.conflict_service import check_text_conflicts
@@ -207,7 +209,21 @@ def critic_node(state: ADGSGraphState) -> ADGSGraphState:
 
 def hitl_review_node(state: ADGSGraphState) -> ADGSGraphState:
     detected_pii = state.get("detected_pii", [])
-    calculated_risk_score = min(len(detected_pii) * 25, 100)
+    extraction_method = state.get("extraction_method")
+    extraction_metadata = state.get("extraction_metadata", {})
+
+    structured_profile = build_structured_profile(
+        extraction_method=extraction_method,
+        extraction_metadata=extraction_metadata,
+        extracted_text=state.get("raw_text"),
+    )
+
+    risk_result = calculate_governance_risk(
+        detected_pii=detected_pii,
+        conflict_found=state.get("conflict_found", False),
+        structured_profile=structured_profile,
+        extraction_method=extraction_method,
+    )
 
     human_decision = interrupt(
         {
@@ -215,8 +231,12 @@ def hitl_review_node(state: ADGSGraphState) -> ADGSGraphState:
             "document_id": state.get("document_id"),
             "original_filename": state.get("original_filename"),
             "document_category": state.get("document_category"),
-            "risk_score": calculated_risk_score,
-            "risk_level": state.get("risk_level"),
+            "risk_score": risk_result["risk_score"],
+            "risk_level": risk_result["risk_level"],
+            "risk_result": risk_result,
+            "structured_profile": structured_profile,
+            "extraction_method": extraction_method,
+            "extraction_metadata": extraction_metadata,
             "detected_pii_count": len(detected_pii),
             "conflict_found": state.get("conflict_found", False),
             "conflict_summary": state.get("conflict_summary"),
