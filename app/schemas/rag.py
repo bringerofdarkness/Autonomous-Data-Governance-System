@@ -1,3 +1,7 @@
+import uuid
+from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -40,3 +44,17 @@ class RagSearchResponse(BaseModel):
     min_score: float
     matches_count: int
     matches: list[RagChunkMatchResponse]
+
+class RagSearchAuditLogResponse(BaseModel):
+    id: uuid.UUID
+    actor_user_id: uuid.UUID | None
+    query: str
+    result_limit: int
+    min_score: float
+    matches_count: int
+    matched_document_ids: list[str]
+    matched_point_ids: list[str]
+    extra_data: dict[str, Any] | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
