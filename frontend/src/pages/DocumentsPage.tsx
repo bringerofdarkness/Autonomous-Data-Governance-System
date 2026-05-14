@@ -16,6 +16,8 @@ const DEFAULT_FILTERS: DocumentListFilters = {
   offset: "0",
 };
 
+type RiskLevelFilter = "" | "low" | "medium" | "high";
+
 function formatDate(value: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleString();
@@ -42,9 +44,9 @@ function riskBadgeClass(riskScore: number | null) {
 
 function riskLabel(riskScore: number | null) {
   if (riskScore === null) return "UNKNOWN";
-  if (riskScore >= 75) return `HIGH ${riskScore}`;
-  if (riskScore >= 40) return `MEDIUM ${riskScore}`;
-  return `LOW ${riskScore}`;
+  if (riskScore >= 75) return `HIGH (${riskScore})`;
+  if (riskScore >= 40) return `MEDIUM (${riskScore})`;
+  return `LOW (${riskScore})`;
 }
 
 function booleanBadgeClass(value: boolean, positiveLabel: string) {
@@ -57,13 +59,49 @@ function booleanBadgeClass(value: boolean, positiveLabel: string) {
   return "boolean-badge boolean-muted";
 }
 
-export function DocumentsPage() {
+function getRiskScoreRange(riskLevel: RiskLevelFilter) {
+  if (riskLevel === "low") {
+    return {
+      min_risk_score: "0",
+      max_risk_score: "39",
+    };
+  }
+
+  if (riskLevel === "medium") {
+    return {
+      min_risk_score: "40",
+      max_risk_score: "74",
+    };
+  }
+
+  if (riskLevel === "high") {
+    return {
+      min_risk_score: "75",
+      max_risk_score: "100",
+    };
+  }
+
+  return {
+    min_risk_score: "",
+    max_risk_score: "",
+  };
+}
+
+export function DocumentsPage({
+  onOpenDocument,
+}: {
+  onOpenDocument: (documentId: string) => void;
+}) {
   const [documents, setDocuments] = useState<DocumentListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const [filters, setFilters] = useState<DocumentListFilters>(DEFAULT_FILTERS);
+  const [riskLevel, setRiskLevel] = useState<RiskLevelFilter>("");
+
+  const [filters, setFilters] = useState<DocumentListFilters>({
+    ...DEFAULT_FILTERS,
+  });
 
   function updateFilter(key: keyof DocumentListFilters, value: string) {
     setFilters((current) => ({
@@ -72,7 +110,25 @@ export function DocumentsPage() {
     }));
   }
 
-  async function loadDocuments(activeFilters: DocumentListFilters = filters) {
+  function buildApiFilters(
+    activeFilters: DocumentListFilters,
+    activeRiskLevel: RiskLevelFilter,
+  ): DocumentListFilters {
+    const riskRange = getRiskScoreRange(activeRiskLevel);
+
+    return {
+      ...activeFilters,
+      min_risk_score: riskRange.min_risk_score,
+      max_risk_score: riskRange.max_risk_score,
+      limit: "20",
+      offset: "0",
+    };
+  }
+
+  async function loadDocuments(
+    activeFilters: DocumentListFilters = filters,
+    activeRiskLevel: RiskLevelFilter = riskLevel,
+  ) {
     try {
       setLoading(true);
       setErrorMessage("");
@@ -83,7 +139,9 @@ export function DocumentsPage() {
         throw new Error("Please login from the Dashboard page first.");
       }
 
-      const data = await getDocuments(token, activeFilters);
+      const apiFilters = buildApiFilters(activeFilters, activeRiskLevel);
+      const data = await getDocuments(token, apiFilters);
+
       setDocuments(data);
       setHasLoadedOnce(true);
     } catch (error) {
@@ -98,13 +156,61 @@ export function DocumentsPage() {
   }
 
   function resetFilters() {
-    setFilters(DEFAULT_FILTERS);
-    void loadDocuments(DEFAULT_FILTERS);
+    const resetFilterValues = {
+      ...DEFAULT_FILTERS,
+    };
+
+    setFilters(resetFilterValues);
+    setRiskLevel("");
+
+    void loadDocuments(resetFilterValues, "");
   }
 
-  useEffect(() => {
-    void loadDocuments(DEFAULT_FILTERS);
-  }, []);
+useEffect(() => {
+  let isMounted = true;
+
+  async function autoLoadDocuments() {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+
+      const token = localStorage.getItem("adgs_access_token");
+
+      if (!token) {
+        throw new Error("Please login from the Dashboard page first.");
+      }
+
+      const data = await getDocuments(token, DEFAULT_FILTERS);
+
+      if (!isMounted) {
+        return;
+      }
+
+      setDocuments(data);
+      setHasLoadedOnce(true);
+    } catch (error) {
+      if (!isMounted) {
+        return;
+      }
+
+      setDocuments([]);
+      setHasLoadedOnce(true);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not load documents.",
+      );
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  }
+
+  void autoLoadDocuments();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   return (
     <section className="page-section">
@@ -112,8 +218,8 @@ export function DocumentsPage() {
         <div>
           <h2>Governance Document Registry</h2>
           <p>
-            Filter uploaded assets by approval status, risk score, conflict
-            detection, and Qdrant Gold indexing state.
+            Review company documents by approval status, risk level, data
+            contradictions, and knowledge base availability.
           </p>
         </div>
 
@@ -125,24 +231,24 @@ export function DocumentsPage() {
       <div className="filter-card">
         <div className="filter-grid">
           <div>
-            <label>Status</label>
+            <label>Document Status</label>
             <select
               value={filters.status}
               onChange={(event) => updateFilter("status", event.target.value)}
             >
               <option value="">All</option>
-              <option value="UPLOADED">UPLOADED</option>
-              <option value="PROCESSING">PROCESSING</option>
-              <option value="PAUSED">PAUSED</option>
-              <option value="WAITING_FOR_ADMIN">WAITING_FOR_ADMIN</option>
-              <option value="APPROVED">APPROVED</option>
-              <option value="REJECTED">REJECTED</option>
-              <option value="FAILED">FAILED</option>
+              <option value="UPLOADED">Uploaded</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="PAUSED">Needs Review</option>
+              <option value="WAITING_FOR_ADMIN">Waiting for Admin</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="FAILED">Failed</option>
             </select>
           </div>
 
           <div>
-            <label>Category</label>
+            <label>Document Category</label>
             <input
               value={filters.document_category}
               onChange={(event) =>
@@ -153,35 +259,22 @@ export function DocumentsPage() {
           </div>
 
           <div>
-            <label>Min Risk</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={filters.min_risk_score}
+            <label>Risk Level</label>
+            <select
+              value={riskLevel}
               onChange={(event) =>
-                updateFilter("min_risk_score", event.target.value)
+                setRiskLevel(event.target.value as RiskLevelFilter)
               }
-              placeholder="75"
-            />
+            >
+              <option value="">All</option>
+              <option value="low">Low Risk (0-39)</option>
+              <option value="medium">Medium Risk (40-74)</option>
+              <option value="high">High Risk (75-100)</option>
+            </select>
           </div>
 
           <div>
-            <label>Max Risk</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={filters.max_risk_score}
-              onChange={(event) =>
-                updateFilter("max_risk_score", event.target.value)
-              }
-              placeholder="100"
-            />
-          </div>
-
-          <div>
-            <label>Conflict</label>
+            <label>Data Contradiction</label>
             <select
               value={filters.conflict_found}
               onChange={(event) =>
@@ -189,42 +282,21 @@ export function DocumentsPage() {
               }
             >
               <option value="">All</option>
-              <option value="true">Conflict Found</option>
-              <option value="false">No Conflict</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
 
           <div>
-            <label>Indexed</label>
+            <label>Knowledge Base Status</label>
             <select
               value={filters.indexed}
               onChange={(event) => updateFilter("indexed", event.target.value)}
             >
               <option value="">All</option>
-              <option value="true">Indexed</option>
-              <option value="false">Not Indexed</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
-          </div>
-
-          <div>
-            <label>Limit</label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={filters.limit}
-              onChange={(event) => updateFilter("limit", event.target.value)}
-            />
-          </div>
-
-          <div>
-            <label>Offset</label>
-            <input
-              type="number"
-              min="0"
-              value={filters.offset}
-              onChange={(event) => updateFilter("offset", event.target.value)}
-            />
           </div>
         </div>
 
@@ -259,16 +331,17 @@ export function DocumentsPage() {
                 <th>Status</th>
                 <th>Category</th>
                 <th>Risk</th>
-                <th>Conflict</th>
-                <th>Indexed</th>
+                <th>Data Contradiction</th>
+                <th>Knowledge Base</th>
                 <th>Created</th>
+                <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
               {documents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="empty-state">
+                  <td colSpan={8} className="empty-state">
                     {loading
                       ? "Loading documents..."
                       : hasLoadedOnce
@@ -305,7 +378,7 @@ export function DocumentsPage() {
                           "Conflict",
                         )}
                       >
-                        {document.conflict_found ? "Conflict" : "Clear"}
+                        {document.conflict_found ? "Yes" : "No"}
                       </span>
                     </td>
 
@@ -316,11 +389,20 @@ export function DocumentsPage() {
                           "Indexed",
                         )}
                       >
-                        {document.qdrant_point_id ? "Indexed" : "Not Indexed"}
+                        {document.qdrant_point_id ? "Available" : "Not Available"}
                       </span>
                     </td>
 
                     <td>{formatDate(document.created_at)}</td>
+
+                    <td>
+                      <button
+                        className="mini-button"
+                        onClick={() => onOpenDocument(document.id)}
+                      >
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
