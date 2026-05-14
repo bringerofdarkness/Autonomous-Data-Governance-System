@@ -1,12 +1,25 @@
 ﻿import { useState } from "react";
 import "./App.css";
 import { DashboardPage } from "./pages/DashboardPage";
+import { DocumentDetailPage } from "./pages/DocumentDetailPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 
-type Page = "dashboard" | "documents";
+type Page = "dashboard" | "documents" | "document-detail";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null,
+  );
+
+  function openDocumentDetail(documentId: string) {
+    setSelectedDocumentId(documentId);
+    setPage("document-detail");
+  }
+
+  function backToDocuments() {
+    setPage("documents");
+  }
 
   return (
     <div className="app-shell">
@@ -21,7 +34,9 @@ function App() {
 
         <nav className="sidebar-nav">
           <button
-            className={page === "dashboard" ? "sidebar-link active" : "sidebar-link"}
+            className={
+              page === "dashboard" ? "sidebar-link active" : "sidebar-link"
+            }
             onClick={() => setPage("dashboard")}
           >
             <span>Overview</span>
@@ -29,7 +44,11 @@ function App() {
           </button>
 
           <button
-            className={page === "documents" ? "sidebar-link active" : "sidebar-link"}
+            className={
+              page === "documents" || page === "document-detail"
+                ? "sidebar-link active"
+                : "sidebar-link"
+            }
             onClick={() => setPage("documents")}
           >
             <span>Documents</span>
@@ -48,7 +67,11 @@ function App() {
           <div>
             <p className="page-kicker">Enterprise AI Governance</p>
             <h1>
-              {page === "dashboard" ? "Governance Dashboard" : "Document Governance"}
+              {page === "dashboard"
+                ? "Governance Dashboard"
+                : page === "documents"
+                  ? "Document Governance"
+                  : "Document Detail"}
             </h1>
           </div>
 
@@ -58,7 +81,18 @@ function App() {
           </div>
         </header>
 
-        {page === "dashboard" ? <DashboardPage /> : <DocumentsPage />}
+        {page === "dashboard" && <DashboardPage />}
+
+        {page === "documents" && (
+          <DocumentsPage onOpenDocument={openDocumentDetail} />
+        )}
+
+        {page === "document-detail" && selectedDocumentId && (
+          <DocumentDetailPage
+            documentId={selectedDocumentId}
+            onBack={backToDocuments}
+          />
+        )}
       </main>
     </div>
   );

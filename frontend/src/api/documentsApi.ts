@@ -41,6 +41,40 @@ export type DocumentListFilters = {
   offset?: string;
 };
 
+export type DocumentStatusDetail = DocumentListItem & {
+  database_status?: string;
+  celery_state?: string | null;
+  celery_result?: unknown;
+  error_message?: string | null;
+};
+
+export type DocumentAuditLog = {
+  id: string;
+  document_id: string;
+  actor_user_id: string | null;
+  action: string;
+  message: string | null;
+  extra_data: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type QdrantChunk = {
+  point_id: string;
+  chunk_index: number | null;
+  chunk_text: string | null;
+  char_count: number | null;
+  payload: Record<string, unknown> | null;
+};
+
+export type DocumentQdrantChunksResponse = {
+  document_id: string;
+  original_filename: string;
+  indexed: boolean;
+  chunks_count: number;
+  chunks: QdrantChunk[];
+  message: string;
+};
+
 export function getDocuments(
   token: string,
   filters: DocumentListFilters,
@@ -59,4 +93,28 @@ export function getDocuments(
   return apiRequest<DocumentListItem[]>(path, {
     token,
   });
+}
+
+export function getDocumentStatus(token: string, documentId: string) {
+  return apiRequest<DocumentStatusDetail>(`/documents/${documentId}/status`, {
+    token,
+  });
+}
+
+export function getDocumentAuditLogs(token: string, documentId: string) {
+  return apiRequest<DocumentAuditLog[]>(
+    `/documents/${documentId}/audit-logs?limit=50&offset=0`,
+    {
+      token,
+    },
+  );
+}
+
+export function getDocumentQdrantChunks(token: string, documentId: string) {
+  return apiRequest<DocumentQdrantChunksResponse>(
+    `/documents/${documentId}/qdrant-chunks?limit=20`,
+    {
+      token,
+    },
+  );
 }
