@@ -1,17 +1,23 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import require_roles
 from app.db.session import get_db_session
 from app.models.document_audit_log import DocumentAuditLog
-from app.models.document_metadata import DocumentMetadata, DocumentStatus
+from app.models.document_metadata import DocumentStatus
 from app.models.rag_search_audit_log import RagSearchAuditLog
 from app.models.user import User
 from app.services.qdrant_service import check_qdrant_health, ensure_gold_collection
-
+from app.models.document_metadata import DocumentMetadata
+from app.services.qdrant_service import (
+    check_qdrant_health,
+    ensure_gold_collection,
+    get_gold_collection_chunks_for_document,
+    get_gold_collection_point,
+)
 
 router = APIRouter(prefix="/system", tags=["System"])
 
@@ -144,4 +150,85 @@ async def get_system_audit_summary(
             "document_audit_logs_total": total_document_audit_logs,
             "document_audit_logs_last_24h": recent_document_audit_logs_24h,
         },
+    }
+
+
+@router.get("/qdrant-integrity")
+async def check_qdrant_integrity(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["Admin"])),
+    limit: int = Query(
+        default=50,
+        ge=1,
+        le=200,
+        description="Maximum number of indexed documents to check.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of indexed documents to skip.",
+    ),
+) -> dict:
+    indexed_documents_result = await db.execute(
+        select(DocumentMetadata)
+        .where(DocumentMetadata.qdrant_point_id.is_not(None))
+        .order_by(DocumentMetadata.indexed_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    indexed_documents = indexed_documents_result.scalars().all()
+
+    integrity_items = []
+    ok_count = 0
+    broken_count = 0
+
+    for document in indexed_documents:
+        qdrant_point_result = get_gold_collection_point(
+            point_id=str(document.qdrant_point_id)
+        )
+
+        qdrant_chunks = get_gold_collection_chunks_for_document(
+            document_id=str(document.id),
+            limit=200,
+        )
+
+        document_point_found = qdrant_point_result["found"]
+        chunk_points_count = len(qdrant_chunks)
+
+        integrity_status = (
+            "OK"
+            if document_point_found and chunk_points_count > 0
+            else "BROKEN"
+        )
+
+        if integrity_status == "OK":
+            ok_count += 1
+        else:
+            broken_count += 1
+
+        integrity_items.append(
+            {
+                "document_id": str(document.id),
+                "original_filename": document.original_filename,
+                "status": document.status.value,
+                "document_category": document.document_category,
+                "risk_score": document.risk_score,
+                "qdrant_point_id": str(document.qdrant_point_id)
+                if document.qdrant_point_id
+                else None,
+                "indexed_at": document.indexed_at.isoformat()
+                if document.indexed_at
+                else None,
+                "document_point_found": document_point_found,
+                "chunk_points_count": chunk_points_count,
+                "integrity_status": integrity_status,
+            }
+        )
+
+    return {
+        "checked_count": len(integrity_items),
+        "ok_count": ok_count,
+        "broken_count": broken_count,
+        "items": integrity_items,
     }
