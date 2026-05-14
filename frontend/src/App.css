@@ -592,3 +592,332 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== Responsive layout hardening ===== */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.main-content {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.page-section,
+.hero-panel,
+.card-panel,
+.filter-card,
+.table-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-card {
+  overflow: hidden;
+}
+
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+table {
+  width: 100%;
+  min-width: 860px;
+}
+
+th,
+td {
+  overflow-wrap: anywhere;
+}
+
+th {
+  line-height: 1.35;
+}
+
+.filename-cell span {
+  max-width: 260px;
+}
+
+.status-badge,
+.risk-badge,
+.boolean-badge {
+  min-width: auto;
+  padding: 6px 11px;
+}
+
+/* Medium screens: reduce sidebar and padding */
+@media (max-width: 1180px) {
+  .app-shell {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    padding: 22px 16px;
+  }
+
+  .main-content {
+    padding: 28px 26px 42px;
+  }
+
+  table {
+    min-width: 820px;
+  }
+}
+
+/* Tablet and mobile: stack sidebar above content */
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding: 18px;
+  }
+
+  .brand-block {
+    margin-bottom: 18px;
+  }
+
+  .sidebar-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+
+  .main-content {
+    padding: 22px 16px 36px;
+  }
+
+  .top-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-panel {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-scroll {
+    border-radius: 14px;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 560px) {
+  .sidebar-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .main-content {
+    padding: 18px 12px 30px;
+  }
+
+  .top-header h1 {
+    font-size: 30px;
+  }
+
+  .hero-panel,
+  .card-panel,
+  .filter-card,
+  .table-card {
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+  }
+}
+
+
+/* ===== Sidebar + table polish fix ===== */
+
+.app-shell {
+  display: block;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 286px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.main-content {
+  margin-left: 286px;
+  min-height: 100vh;
+  width: calc(100% - 286px);
+}
+
+/* Keep the sidebar footer visually stable */
+.sidebar-footer {
+  margin-top: 28px;
+}
+
+/* Improve table readability */
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  min-width: 1080px;
+}
+
+th,
+td {
+  white-space: normal;
+}
+
+th {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+td {
+  word-break: normal;
+}
+
+/* Prevent important short labels from breaking */
+.status-badge,
+.risk-badge,
+.boolean-badge,
+.mini-button {
+  white-space: nowrap;
+}
+
+/* Fix View button splitting into Vie/w */
+.mini-button {
+  min-width: 56px;
+  text-align: center;
+  padding: 7px 12px;
+}
+
+/* Make filename column cleaner */
+.filename-cell {
+  min-width: 220px;
+}
+
+.filename-cell strong {
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.filename-cell span {
+  max-width: 260px;
+  line-height: 1.45;
+}
+
+/* Give compact columns better minimum widths */
+th:nth-child(2),
+td:nth-child(2) {
+  min-width: 120px;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  min-width: 100px;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  min-width: 115px;
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+  min-width: 140px;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  min-width: 155px;
+}
+
+th:nth-child(8),
+td:nth-child(8) {
+  min-width: 80px;
+}
+
+/* Medium screens */
+@media (max-width: 1180px) {
+  .sidebar {
+    width: 230px;
+  }
+
+  .main-content {
+    margin-left: 230px;
+    width: calc(100% - 230px);
+  }
+
+  table {
+    min-width: 1040px;
+  }
+}
+
+/* Tablet/mobile: sidebar becomes top navigation again */
+@media (max-width: 900px) {
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+
+  table {
+    min-width: 980px;
+  }
+}
