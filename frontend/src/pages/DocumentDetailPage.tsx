@@ -46,10 +46,8 @@ function riskLabel(score: number | null | undefined) {
 }
 
 function readableStatus(status: string) {
-  if (status === "PAUSED" || status === "WAITING_FOR_ADMIN") {
-    return "Needs Admin Review";
-  }
-
+  if (status === "PAUSED") return "Needs Admin Review";
+  if (status === "WAITING_FOR_ADMIN") return "Waiting for Admin";
   return status.replaceAll("_", " ");
 }
 
@@ -75,8 +73,12 @@ function getActionMessage(
   conflictFound: boolean,
   knowledgeAvailable: boolean,
 ) {
-  if (status === "PAUSED" || status === "WAITING_FOR_ADMIN") {
+  if (status === "PAUSED") {
     return "This document is paused because it contains sensitive information or a possible data contradiction. An Admin must review it before employees can use it as trusted company knowledge.";
+  }
+
+  if (status === "WAITING_FOR_ADMIN") {
+    return "This document is waiting for Admin review before it can become trusted company knowledge.";
   }
 
   if (status === "APPROVED" && knowledgeAvailable) {
@@ -112,6 +114,12 @@ export function DocumentDetailPage({
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [adminActionLoading, setAdminActionLoading] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [adminActionMessage, setAdminActionMessage] = useState("");
+  const [adminActionError, setAdminActionError] = useState("");
 
   async function loadDetail() {
     try {
@@ -149,6 +157,65 @@ export function DocumentDetailPage({
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAdminDecision(decision: "approve" | "reject") {
+    try {
+      setAdminActionLoading(decision);
+      setAdminActionMessage("");
+      setAdminActionError("");
+
+      const token = localStorage.getItem("adgs_access_token");
+
+      if (!token) {
+        throw new Error("Please login again before taking an Admin action.");
+      }
+
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+
+      const response = await fetch(
+        `${apiBaseUrl}/documents/${documentId}/resume`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            decision,
+            reason:
+              decision === "approve"
+                ? "Approved via Frontend Dashboard"
+                : "Rejected via Frontend Dashboard",
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        throw new Error(
+          errorText || `Admin action failed with status ${response.status}`,
+        );
+      }
+
+      setAdminActionMessage(
+        decision === "approve"
+          ? "Document approved successfully. Refreshing review..."
+          : "Document rejected successfully. Refreshing review...",
+      );
+
+      await loadDetail();
+    } catch (error) {
+      setAdminActionError(
+        error instanceof Error
+          ? error.message
+          : "Could not complete Admin action.",
+      );
+    } finally {
+      setAdminActionLoading(null);
     }
   }
 
@@ -279,6 +346,8 @@ export function DocumentDetailPage({
     knowledgeAvailable,
   );
 
+  const canTakeAdminAction = displayStatus === "PAUSED";
+
   return (
     <section className="page-section">
       <div className="detail-toolbar">
@@ -343,6 +412,53 @@ export function DocumentDetailPage({
             <span>What this means</span>
             <p>{actionMessage}</p>
           </div>
+
+          {canTakeAdminAction && (
+            <div className="review-admin-actions">
+              <div>
+                <p className="review-admin-actions-label">
+                  Admin Decision Required
+                </p>
+                <h3>Review this document before it becomes trusted knowledge</h3>
+                <p>
+                  Approving will continue the governance workflow. Rejecting will
+                  stop this document from being used as trusted company knowledge.
+                </p>
+              </div>
+
+              <div className="review-admin-actions-buttons">
+                <button
+                  type="button"
+                  className="review-approve-button"
+                  disabled={adminActionLoading !== null}
+                  onClick={() => void handleAdminDecision("approve")}
+                >
+                  {adminActionLoading === "approve"
+                    ? "Approving..."
+                    : "Approve Document"}
+                </button>
+
+                <button
+                  type="button"
+                  className="review-reject-button"
+                  disabled={adminActionLoading !== null}
+                  onClick={() => void handleAdminDecision("reject")}
+                >
+                  {adminActionLoading === "reject"
+                    ? "Rejecting..."
+                    : "Reject Document"}
+                </button>
+              </div>
+
+              {adminActionMessage && (
+                <p className="review-admin-success">{adminActionMessage}</p>
+              )}
+
+              {adminActionError && (
+                <p className="review-admin-error">{adminActionError}</p>
+              )}
+            </div>
+          )}
 
           <div className="review-main-grid">
             <div className="review-panel">
