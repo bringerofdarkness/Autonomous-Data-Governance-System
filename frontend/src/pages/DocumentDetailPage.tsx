@@ -35,78 +35,67 @@ function formatDate(value: string | null | undefined) {
 
 function riskLevel(score: number | null | undefined) {
   if (score === null || score === undefined) return "Unknown";
-  if (score >= 75) return "High";
-  if (score >= 40) return "Medium";
-  return "Low";
+  if (score >= 75) return "High Risk";
+  if (score >= 40) return "Medium Risk";
+  return "Low Risk";
 }
 
 function riskLabel(score: number | null | undefined) {
   if (score === null || score === undefined) return "Unknown";
-  return `${riskLevel(score)} Risk (${score})`;
+  return `${riskLevel(score)} (${score})`;
 }
 
-function riskClass(score: number | null | undefined) {
-  if (score === null || score === undefined) return "risk-badge risk-unknown";
-  if (score >= 75) return "risk-badge risk-high";
-  if (score >= 40) return "risk-badge risk-medium";
-  return "risk-badge risk-low";
-}
-
-function statusClass(status: string | undefined) {
-  if (status === "APPROVED") return "status-badge status-approved";
+function readableStatus(status: string) {
   if (status === "PAUSED" || status === "WAITING_FOR_ADMIN") {
-    return "status-badge status-warning";
+    return "Needs Admin Review";
   }
-  if (status === "REJECTED" || status === "FAILED") {
-    return "status-badge status-danger";
-  }
-  if (status === "PROCESSING") return "status-badge status-processing";
-  return "status-badge status-neutral";
+
+  return status.replaceAll("_", " ");
 }
 
 function humanizeAction(action: string) {
   const labels: Record<string, string> = {
     DOCUMENT_UPLOADED: "Document uploaded",
-    DOCUMENT_PROCESSING_STARTED: "Governance processing started",
+    DOCUMENT_PROCESSING_STARTED: "AI governance review started",
     DOCUMENT_PII_DETECTED: "Sensitive data scan completed",
     DOCUMENT_CONFLICT_CHECKED: "Data contradiction check completed",
     DOCUMENT_HITL_PAUSED: "Admin review required",
     DOCUMENT_HITL_APPROVED: "Document approved by Admin",
     DOCUMENT_HITL_REJECTED: "Document rejected by Admin",
     DOCUMENT_INDEXED_IN_QDRANT: "Added to trusted knowledge base",
-    DOCUMENT_QDRANT_INTEGRITY_REPAIRED: "Knowledge base indexing record repaired",
+    DOCUMENT_QDRANT_INTEGRITY_REPAIRED: "Knowledge base record repaired",
   };
 
-  return labels[action] || action.replaceAll("_", " ").toLowerCase();
+  return labels[action] || action.replaceAll("_", " ");
 }
 
-function getRecommendation(
+function getActionMessage(
   status: string,
   riskScore: number | null | undefined,
   conflictFound: boolean,
   knowledgeAvailable: boolean,
 ) {
   if (status === "PAUSED" || status === "WAITING_FOR_ADMIN") {
-    return "This document needs Admin review before it can become trusted company knowledge.";
-  }
-
-  if (status === "APPROVED" && !knowledgeAvailable) {
-    return "This document is approved but not available in the trusted knowledge base yet.";
+    return "This document is paused because it contains sensitive information or a possible data contradiction. An Admin must review it before employees can use it as trusted company knowledge.";
   }
 
   if (status === "APPROVED" && knowledgeAvailable) {
-    return "This document is approved and available for trusted retrieval.";
+    return "This document has been approved and is already available in the trusted company knowledge base.";
+  }
+
+  if (status === "APPROVED" && !knowledgeAvailable) {
+    return "This document is approved, but it has not yet been added to the trusted company knowledge base.";
   }
 
   if (status === "REJECTED") {
-    return "This document was rejected and should not be used as trusted knowledge.";
+    return "This document was rejected and should not be used as trusted company knowledge.";
   }
 
   if ((riskScore ?? 0) >= 75 || conflictFound) {
-    return "This document should be reviewed carefully because it contains high-risk signals.";
+    return "This document contains high-risk governance signals and should be reviewed carefully before use.";
   }
 
-  return "No immediate action is required.";
+  return "No immediate governance action is required.";
 }
 
 export function DocumentDetailPage({
@@ -154,7 +143,9 @@ export function DocumentDetailPage({
       setAuditLogs([]);
       setQdrantChunks(null);
       setErrorMessage(
-        error instanceof Error ? error.message : "Could not load document detail.",
+        error instanceof Error
+          ? error.message
+          : "Could not load document detail.",
       );
     } finally {
       setLoading(false);
@@ -162,7 +153,63 @@ export function DocumentDetailPage({
   }
 
   useEffect(() => {
-    void loadDetail();
+    let isMounted = true;
+
+    async function autoLoadDetail() {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const token = localStorage.getItem("adgs_access_token");
+
+        if (!token) {
+          throw new Error("Please login from the Dashboard page first.");
+        }
+
+        const [statusResult, auditResult] = await Promise.all([
+          getDocumentStatus(token, documentId),
+          getDocumentAuditLogs(token, documentId),
+        ]);
+
+        if (!isMounted) return;
+
+        setDocument(statusResult);
+        setAuditLogs(auditResult);
+
+        try {
+          const chunksResult = await getDocumentQdrantChunks(token, documentId);
+
+          if (isMounted) {
+            setQdrantChunks(chunksResult);
+          }
+        } catch {
+          if (isMounted) {
+            setQdrantChunks(null);
+          }
+        }
+      } catch (error) {
+        if (!isMounted) return;
+
+        setDocument(null);
+        setAuditLogs([]);
+        setQdrantChunks(null);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load document detail.",
+        );
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void autoLoadDetail();
+
+    return () => {
+      isMounted = false;
+    };
   }, [documentId]);
 
   const governanceData = useMemo(() => {
@@ -182,11 +229,13 @@ export function DocumentDetailPage({
       .map(asRecord)
       .filter((item): item is Record<string, unknown> => item !== null);
 
-    const governanceNotes = asArray(structuredProfile?.governance_notes)
-      .filter((item): item is string => typeof item === "string");
+    const governanceNotes = asArray(structuredProfile?.governance_notes).filter(
+      (item): item is string => typeof item === "string",
+    );
 
-    const riskFactors = asArray(riskResult?.risk_factors)
-      .filter((item): item is string => typeof item === "string");
+    const riskFactors = asArray(riskResult?.risk_factors).filter(
+      (item): item is string => typeof item === "string",
+    );
 
     return {
       piiCount: asNumber(piiSummary?.pii_count),
@@ -198,12 +247,15 @@ export function DocumentDetailPage({
     };
   }, [auditLogs]);
 
+  const orderedAuditLogs = [...auditLogs].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
   if (loading && !document) {
     return (
       <section className="page-section">
-        <div className="table-card">
-          <div className="empty-state">Loading governance review...</div>
-        </div>
+        <div className="review-loading-card">Loading governance review...</div>
       </section>
     );
   }
@@ -212,6 +264,7 @@ export function DocumentDetailPage({
     document?.status || document?.database_status || "UNKNOWN";
 
   const displayDocumentId = document?.document_id || document?.id || documentId;
+
   const displayFilename =
     document?.original_filename || qdrantChunks?.original_filename || "Document";
 
@@ -219,7 +272,7 @@ export function DocumentDetailPage({
     document?.qdrant_point_id || qdrantChunks?.indexed,
   );
 
-  const recommendation = getRecommendation(
+  const actionMessage = getActionMessage(
     displayStatus,
     document?.risk_score,
     Boolean(document?.conflict_found),
@@ -242,135 +295,159 @@ export function DocumentDetailPage({
 
       {document && (
         <>
-          <div className="hero-panel">
-            <div>
+          <div className="review-console-hero">
+            <div className="review-console-copy">
+              <p className="review-console-eyebrow">Governance Review Console</p>
               <h2>{displayFilename}</h2>
               <p>
-                This review explains the document risk, sensitive data exposure,
-                contradiction status, and trusted knowledge availability.
+                This page explains whether this document is safe for company use,
+                what sensitive information was found, whether it conflicts with
+                existing trusted knowledge, and what action is required.
               </p>
             </div>
 
-            <div className="detail-badge-row">
-              <span className={statusClass(displayStatus)}>
-                {displayStatus.replaceAll("_", " ")}
+            <div className="review-console-badges">
+              <span className="review-status-badge">
+                {readableStatus(displayStatus)}
               </span>
 
-              <span className={riskClass(document.risk_score)}>
+              <span className="review-risk-badge">
                 {riskLabel(document.risk_score)}
               </span>
             </div>
           </div>
 
           <div className="review-summary-grid">
-            <div className="review-summary-card">
-              <span>Document Status</span>
-              <strong>{displayStatus.replaceAll("_", " ")}</strong>
+            <div className="review-summary-card review-summary-warning">
+              <span>Current Status</span>
+              <strong>{readableStatus(displayStatus)}</strong>
             </div>
 
-            <div className="review-summary-card">
+            <div className="review-summary-card review-summary-danger">
               <span>Risk Level</span>
               <strong>{riskLabel(document.risk_score)}</strong>
             </div>
 
-            <div className="review-summary-card">
+            <div className="review-summary-card review-summary-orange">
               <span>Data Contradiction</span>
               <strong>{document.conflict_found ? "Yes" : "No"}</strong>
             </div>
 
-            <div className="review-summary-card">
-              <span>Knowledge Base</span>
+            <div className="review-summary-card review-summary-neutral">
+              <span>Trusted Knowledge</span>
               <strong>{knowledgeAvailable ? "Available" : "Not Available"}</strong>
             </div>
           </div>
 
-          <div className="recommendation-card">
-            <span>Recommended Governance Action</span>
-            <p>{recommendation}</p>
+          <div className="review-meaning-card">
+            <span>What this means</span>
+            <p>{actionMessage}</p>
           </div>
 
-          <div className="detail-grid">
-            <div className="detail-card">
-              <h3>Document Overview</h3>
+          <div className="review-main-grid">
+            <div className="review-panel">
+              <h3>Document Information</h3>
 
-              <dl>
-                <dt>Document ID</dt>
-                <dd>{displayDocumentId}</dd>
+              <dl className="review-definition-list">
+                <div>
+                  <dt>Document ID</dt>
+                  <dd>{displayDocumentId}</dd>
+                </div>
 
-                <dt>Category</dt>
-                <dd>{document.document_category || "-"}</dd>
+                <div>
+                  <dt>Category</dt>
+                  <dd>{document.document_category || "-"}</dd>
+                </div>
 
-                <dt>Created</dt>
-                <dd>{formatDate(document.created_at)}</dd>
+                <div>
+                  <dt>Created</dt>
+                  <dd>{formatDate(document.created_at)}</dd>
+                </div>
 
-                <dt>Updated</dt>
-                <dd>{formatDate(document.updated_at)}</dd>
-
-                <dt>Processing Message</dt>
-                <dd>{document.error_message || "No active processing error."}</dd>
+                <div>
+                  <dt>Processing Message</dt>
+                  <dd>{document.error_message || "No active processing error."}</dd>
+                </div>
               </dl>
             </div>
 
-            <div className="detail-card">
-              <h3>Sensitive Data Profile</h3>
+            <div className="review-panel review-panel-wide">
+              <div className="review-panel-header">
+                <div>
+                  <h3>Sensitive Data Found</h3>
+                  <p>
+                    The system found {governanceData.piiCount ?? 0} sensitive
+                    item(s). Raw sensitive values are not stored in audit logs.
+                  </p>
+                </div>
 
-              <dl>
-                <dt>Sensitive Data Items</dt>
-                <dd>{governanceData.piiCount ?? 0}</dd>
+                <span className="review-pii-alert">PII Detected</span>
+              </div>
 
-                <dt>Detected Types</dt>
-                <dd>
-                  <div className="pill-list">
-                    {governanceData.piiTypes &&
-                    Object.entries(governanceData.piiTypes).length > 0 ? (
-                      Object.entries(governanceData.piiTypes).map(([type, count]) => (
-                        <span className="info-pill" key={type}>
-                          {type.replaceAll("_", " ")}: {String(count)}
-                        </span>
-                      ))
-                    ) : (
-                      "-"
-                    )}
+              <div className="review-chip-grid">
+                {governanceData.piiTypes &&
+                Object.entries(governanceData.piiTypes).length > 0 ? (
+                  Object.entries(governanceData.piiTypes).map(([type, count]) => (
+                    <div className="review-pii-chip" key={type}>
+                      <span>{type.replaceAll("_", " ")}</span>
+                      <strong>{String(count)}</strong>
+                    </div>
+                  ))
+                ) : (
+                  <p className="review-muted">No sensitive categories available.</p>
+                )}
+              </div>
+
+              <h4 className="review-subtitle">Sensitive Fields</h4>
+
+              <div className="review-field-table">
+                <div className="review-field-header">
+                  <span>Field Name</span>
+                  <span>Type</span>
+                </div>
+
+                {governanceData.sensitiveFields.length > 0 ? (
+                  governanceData.sensitiveFields.map((field, index) => (
+                    <div
+                      className="review-field-row"
+                      key={`${String(field.field_name)}-${index}`}
+                    >
+                      <span>{asString(field.field_name) || "Unknown field"}</span>
+                      <strong>
+                        {asString(field.sensitivity_type)?.replaceAll("_", " ") ||
+                          "Sensitive"}
+                      </strong>
+                    </div>
+                  ))
+                ) : (
+                  <div className="review-field-empty">
+                    No structured sensitive fields available.
                   </div>
-                </dd>
-
-                <dt>Sensitive Fields</dt>
-                <dd>
-                  <div className="pill-list">
-                    {governanceData.sensitiveFields.length > 0 ? (
-                      governanceData.sensitiveFields.map((field, index) => (
-                        <span className="info-pill" key={`${String(field.field_name)}-${index}`}>
-                          {asString(field.field_name) || "Unknown field"} ·{" "}
-                          {asString(field.sensitivity_type) || "Sensitive"}
-                        </span>
-                      ))
-                    ) : (
-                      "-"
-                    )}
-                  </div>
-                </dd>
-              </dl>
+                )}
+              </div>
             </div>
+          </div>
 
-            <div className="detail-card">
-              <h3>Risk Explanation</h3>
+          <div className="review-main-grid">
+            <div className="review-panel">
+              <h3>Why this document is risky</h3>
 
               {governanceData.riskFactors.length > 0 ? (
-                <ul className="risk-factor-list">
+                <ul className="review-risk-list">
                   {governanceData.riskFactors.map((factor) => (
                     <li key={factor}>{factor}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="muted-copy">No risk factor breakdown available.</p>
+                <p className="review-muted">No risk factor breakdown available.</p>
               )}
 
               {governanceData.scoreBreakdown &&
                 Object.entries(governanceData.scoreBreakdown).length > 0 && (
-                  <div className="score-grid">
+                  <div className="review-score-grid">
                     {Object.entries(governanceData.scoreBreakdown).map(
                       ([key, value]) => (
-                        <div className="score-item" key={key}>
+                        <div className="review-score-box" key={key}>
                           <span>{key.replaceAll("_", " ")}</span>
                           <strong>{String(value)}</strong>
                         </div>
@@ -380,38 +457,33 @@ export function DocumentDetailPage({
                 )}
             </div>
 
-            <div className="detail-card">
-              <h3>Knowledge Base Status</h3>
+            <div className="review-panel">
+              <h3>Data Contradiction</h3>
 
-              <dl>
-                <dt>Availability</dt>
-                <dd>{knowledgeAvailable ? "Available" : "Not Available"}</dd>
-
-                <dt>Indexed At</dt>
-                <dd>{formatDate(document.indexed_at)}</dd>
-
-                <dt>Available Chunks</dt>
-                <dd>{qdrantChunks?.chunks_count ?? 0}</dd>
-
-                <dt>Purpose</dt>
-                <dd>
-                  Only approved and redacted documents should become trusted
-                  knowledge for retrieval.
-                </dd>
-              </dl>
+              <div className="review-conflict-card">
+                <strong>
+                  {document.conflict_found
+                    ? "Contradiction Found"
+                    : "No Contradiction"}
+                </strong>
+                <p>
+                  {document.conflict_summary ||
+                    "No contradiction summary was provided by the governance engine."}
+                </p>
+              </div>
             </div>
           </div>
 
           {governanceData.governanceNotes.length > 0 && (
-            <div className="table-card">
-              <div className="table-header">
-                <h2>Governance Notes</h2>
-                <p>{governanceData.governanceNotes.length} note(s)</p>
+            <div className="review-panel">
+              <div className="review-section-title-row">
+                <h3>Governance Notes</h3>
+                <span>{governanceData.governanceNotes.length} note(s)</span>
               </div>
 
-              <div className="note-list">
-                {governanceData.governanceNotes.map((note) => (
-                  <div className="note-card" key={note}>
+              <div className="review-note-list">
+                {governanceData.governanceNotes.map((note, index) => (
+                  <div className="review-note-card" key={`${note}-${index}`}>
                     {note}
                   </div>
                 ))}
@@ -419,26 +491,30 @@ export function DocumentDetailPage({
             </div>
           )}
 
-          <div className="table-card">
-            <div className="table-header">
-              <h2>Governance Timeline</h2>
-              <p>{auditLogs.length} event(s)</p>
+          <div className="review-panel">
+            <div className="review-section-title-row">
+              <div>
+                <h3>Governance Timeline</h3>
+                <p>Chronological audit trail from upload to review decision.</p>
+              </div>
+              <span>{orderedAuditLogs.length} event(s)</span>
             </div>
 
-            <div className="timeline-list">
-              {auditLogs.length === 0 ? (
-                <div className="empty-state">No governance events found.</div>
+            <div className="review-timeline">
+              {orderedAuditLogs.length === 0 ? (
+                <div className="review-empty-state">No governance events found.</div>
               ) : (
-                auditLogs.map((log) => (
-                  <div className="timeline-item" key={log.id}>
-                    <div className="timeline-dot" />
+                orderedAuditLogs.map((log, index) => (
+                  <div className="review-timeline-item" key={log.id}>
+                    <div className="review-timeline-number">{index + 1}</div>
 
-                    <div>
-                      <div className="timeline-title">
-                        {humanizeAction(log.action)}
+                    <div className="review-timeline-card">
+                      <div className="review-timeline-header">
+                        <strong>{humanizeAction(log.action)}</strong>
+                        <span>{formatDate(log.created_at)}</span>
                       </div>
+
                       <p>{log.message || "No message provided."}</p>
-                      <small>{formatDate(log.created_at)}</small>
                     </div>
                   </div>
                 ))
@@ -446,10 +522,16 @@ export function DocumentDetailPage({
             </div>
           </div>
 
-          <div className="table-card">
-            <div className="table-header">
-              <h2>Trusted Knowledge Preview</h2>
-              <p>{qdrantChunks?.chunks_count ?? 0} chunk(s)</p>
+          <div className="review-panel">
+            <div className="review-section-title-row">
+              <div>
+                <h3>Trusted Knowledge Preview</h3>
+                <p>
+                  Only approved and redacted content should become searchable
+                  company knowledge.
+                </p>
+              </div>
+              <span>{qdrantChunks?.chunks_count ?? 0} chunk(s)</span>
             </div>
 
             {qdrantChunks && qdrantChunks.chunks.length > 0 ? (
@@ -466,9 +548,10 @@ export function DocumentDetailPage({
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
+              <div className="review-empty-state">
                 This document is not currently available in the trusted
-                knowledge base.
+                knowledge base. It must be approved before employees can use it
+                as trusted company knowledge.
               </div>
             )}
           </div>
