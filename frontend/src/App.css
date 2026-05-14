@@ -921,3 +921,147 @@ td:nth-child(8) {
     min-width: 980px;
   }
 }
+.review-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.review-summary-card {
+  background: rgba(251, 250, 247, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.review-summary-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.review-summary-card strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.recommendation-card {
+  background: linear-gradient(135deg, rgba(51, 78, 172, 0.08), rgba(4, 120, 87, 0.06));
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.recommendation-card span {
+  display: block;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.recommendation-card p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.65;
+  font-weight: 700;
+}
+
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.info-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #ebe8e1;
+  border: 1px solid #d6d0c5;
+  color: #3f3f46;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.risk-factor-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.score-item {
+  border-radius: 14px;
+  background: #fffefd;
+  border: 1px solid #eee9df;
+  padding: 12px;
+}
+
+.score-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+
+.score-item strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.note-list {
+  display: grid;
+  gap: 10px;
+}
+
+.note-card {
+  border-radius: 16px;
+  background: #fffefd;
+  border: 1px solid #eee9df;
+  padding: 14px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  font-weight: 650;
+}
+
+.muted-copy {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+
+/* Detail page badge spacing fix */
+.detail-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-badge-row .status-badge,
+.detail-badge-row .risk-badge {
+  margin: 0;
+}

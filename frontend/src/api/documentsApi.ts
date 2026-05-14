@@ -37,11 +37,15 @@ export type DocumentListFilters = {
   max_risk_score?: string;
   conflict_found?: string;
   indexed?: string;
+  uploaded_by_id?: string;
+  created_from?: string;
+  created_to?: string;
   limit?: string;
   offset?: string;
 };
 
-export type DocumentStatusDetail = DocumentListItem & {
+export type DocumentStatusDetail = Partial<DocumentListItem> & {
+  document_id?: string;
   database_status?: string;
   celery_state?: string | null;
   celery_result?: unknown;
