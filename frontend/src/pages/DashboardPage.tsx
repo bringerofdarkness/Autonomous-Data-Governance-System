@@ -62,17 +62,27 @@ export function DashboardPage() {
   }
 
   return (
-    <main className="dashboard-page">
-      <section className="dashboard-container">
-        <p className="eyebrow">ADGS ADMIN</p>
-        <h1>Governance Dashboard</h1>
-        <p className="subtitle">
-          Monitor documents, risk, conflicts, indexing, RAG activity, and audit logs.
-        </p>
+    <section className="page-section">
+      <div className="hero-panel">
+        <div>
+          <h2>Policy Intelligence Control Room</h2>
+          <p>
+            A live operational view of sensitive document intake, risk scoring,
+            human approval decisions, Gold Collection indexing, and retrieval
+            audit activity.
+          </p>
+        </div>
 
-        <div className="login-card">
-          {!token && (
-            <>
+        <div className="system-pill">
+          <span className="pulse-dot" />
+          Governance Active
+        </div>
+      </div>
+
+      <div className="card-panel">
+        {!token ? (
+          <div className="login-grid">
+            <div className="form-control">
               <label>Admin Email</label>
               <input
                 type="email"
@@ -80,7 +90,9 @@ export function DashboardPage() {
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder="admin@adgs.com"
               />
+            </div>
 
+            <div className="form-control">
               <label>Admin Password</label>
               <input
                 type="password"
@@ -88,46 +100,49 @@ export function DashboardPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter admin password"
               />
-            </>
-          )}
-
-          <div className="button-row">
-            <button
-              onClick={loadDashboard}
-              disabled={loading || (!token && (!username.trim() || !password.trim()))}
-            >
-              {loading ? "Loading..." : token ? "Refresh Dashboard" : "Login & Load Dashboard"}
-            </button>
-
-            {token && (
-              <button className="secondary-button" onClick={logout}>
-                Logout
-              </button>
-            )}
-          </div>
-
-          {errorMessage && <p className="error-message">{errorMessage}</p>}
-        </div>
-
-        {summary && (
-          <>
-            <div className="stats-grid">
-              <StatCard title="Total Documents" value={summary.documents.total} />
-              <StatCard title="Approved" value={summary.documents.approved} />
-              <StatCard title="Paused" value={summary.documents.paused} />
-              <StatCard title="Indexed" value={summary.documents.indexed} />
-              <StatCard title="High Risk" value={summary.documents.high_risk} />
-              <StatCard title="Conflicts" value={summary.documents.conflict_found} />
-              <StatCard title="RAG Searches" value={summary.rag.total_searches} />
-              <StatCard title="Audit Logs" value={summary.audit_logs.document_audit_logs_total} />
             </div>
 
-            <p className="generated-at">
-              Last generated: {new Date(summary.generated_at).toLocaleString()}
-            </p>
-          </>
+            <button
+              className="primary-button"
+              onClick={loadDashboard}
+              disabled={loading || !username.trim() || !password.trim()}
+            >
+              {loading ? "Loading..." : "Sign in"}
+            </button>
+          </div>
+        ) : (
+          <div className="button-row">
+            <button className="primary-button" onClick={loadDashboard} disabled={loading}>
+              {loading ? "Refreshing..." : "Refresh Metrics"}
+            </button>
+
+            <button className="secondary-button" onClick={logout}>
+              Sign out
+            </button>
+          </div>
         )}
-      </section>
-    </main>
+
+        {errorMessage && <p className="error-message">{errorMessage}</p>}
+      </div>
+
+      {summary && (
+        <>
+          <div className="stats-grid">
+            <StatCard title="Total Documents" value={summary.documents.total} />
+            <StatCard title="Approved" value={summary.documents.approved} />
+            <StatCard title="Paused" value={summary.documents.paused} />
+            <StatCard title="Gold Indexed" value={summary.documents.indexed} />
+            <StatCard title="High Risk" value={summary.documents.high_risk} />
+            <StatCard title="Conflicts" value={summary.documents.conflict_found} />
+            <StatCard title="RAG Searches" value={summary.rag.total_searches} />
+            <StatCard title="Audit Events" value={summary.audit_logs.document_audit_logs_total} />
+          </div>
+
+          <p className="generated-at">
+            Metrics generated {new Date(summary.generated_at).toLocaleString()}
+          </p>
+        </>
+      )}
+    </section>
   );
 }
