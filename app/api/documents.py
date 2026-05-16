@@ -661,10 +661,15 @@ async def resume_paused_document_workflow(
             detail="Document not found.",
         )
 
-    if document.status != DocumentStatus.PAUSED:
+    allowed_resume_statuses = {
+        DocumentStatus.PAUSED,
+        DocumentStatus.WAITING_FOR_ADMIN,
+    }
+
+    if document.status not in allowed_resume_statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PAUSED documents can be resumed.",
+            detail="Only documents waiting for Admin review can be resumed.",
         )
 
     graph = build_adgs_graph()
@@ -713,8 +718,8 @@ async def resume_paused_document_workflow(
             detail=document.error_message,
         )
 
-    hitl_decision = graph_result.get("hitl_decision", resume_request.decision)
-    hitl_reason = graph_result.get("hitl_reason", resume_request.reason)
+    hitl_decision = graph_result.get("hitl_decision") or resume_request.decision
+    hitl_reason = graph_result.get("hitl_reason") or resume_request.reason
 
     if hitl_decision == "approve":
         document.status = DocumentStatus.APPROVED
@@ -748,6 +753,96 @@ async def resume_paused_document_workflow(
             "document_category": document.document_category,
         },
     )
+
+    if hitl_decision == "approve":
+        if not document.cleaned_text_filename:
+            document.status = DocumentStatus.FAILED
+            document.error_message = (
+                "Document was approved, but indexing failed because cleaned text is missing."
+            )
+
+            await create_document_audit_log(
+                db=db,
+                document_id=document.id,
+                actor_user_id=current_user.id,
+                action="DOCUMENT_INDEXING_FAILED",
+                message=document.error_message,
+                extra_data={
+                    "reason": "missing_cleaned_text_filename",
+                    "approved_by": current_user.email,
+                    "indexing_trigger": "HITL_APPROVAL_RESUME",
+                },
+            )
+
+            await db.commit()
+            await db.refresh(document)
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=document.error_message,
+            )
+
+        try:
+            indexing_result = index_cleaned_document_in_qdrant(
+                document_id=document.id,
+                original_filename=document.original_filename,
+                cleaned_text_filename=document.cleaned_text_filename,
+                document_category=document.document_category,
+                risk_score=document.risk_score,
+            )
+        except Exception as exc:
+            document.status = DocumentStatus.FAILED
+            document.error_message = (
+                "Document was approved, but automatic Qdrant indexing failed."
+            )
+
+            await create_document_audit_log(
+                db=db,
+                document_id=document.id,
+                actor_user_id=current_user.id,
+                action="DOCUMENT_INDEXING_FAILED",
+                message=document.error_message,
+                extra_data={
+                    "reason": str(exc),
+                    "approved_by": current_user.email,
+                    "indexing_trigger": "HITL_APPROVAL_RESUME",
+                },
+            )
+
+            await db.commit()
+            await db.refresh(document)
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=document.error_message,
+            )
+
+        document.qdrant_point_id = indexing_result["qdrant_point_id"]
+        document.indexed_at = datetime.now(timezone.utc)
+
+        response_message = (
+            "Paused workflow resumed, document approved, and indexed into Qdrant Gold collection."
+        )
+
+        await create_document_audit_log(
+            db=db,
+            document_id=document.id,
+            actor_user_id=current_user.id,
+            action="DOCUMENT_INDEXED_IN_QDRANT",
+            message=(
+                "Document automatically indexed into Qdrant Gold collection "
+                f"after Admin approval by {current_user.email}."
+            ),
+            extra_data={
+                "qdrant_point_id": str(document.qdrant_point_id),
+                "collection_name": indexing_result["collection_name"],
+                "vector_size": indexing_result["vector_size"],
+                "chunks_indexed": indexing_result["chunks_indexed"],
+                "points_indexed": indexing_result["points_indexed"],
+                "indexed_by": current_user.email,
+                "indexing_trigger": "HITL_APPROVAL_RESUME",
+            },
+        )
 
     await db.commit()
     await db.refresh(document)

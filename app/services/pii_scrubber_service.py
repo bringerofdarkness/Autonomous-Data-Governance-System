@@ -15,6 +15,17 @@ EMPLOYEE_ID_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+
+LABELLED_EMPLOYEE_ID_PATTERN = re.compile(
+    r"\b(?P<label>"
+    r"Employee ID|Employee Id|Employee No|Employee Number|Staff ID|Staff No|"
+    r"User ID|User Id|Personnel ID|Personnel No|"
+    r"(?:[A-Za-z0-9_]+\.)*(?:employee_id|staff_id|user_id|personnel_id)"
+    r")\s*:\s*"
+    r"(?P<employee_id>[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+){1,5})\b",
+    re.IGNORECASE,
+)
+
 LABELLED_PERSON_NAME_PATTERN = re.compile(
     r"\b(?P<label>"
     r"Employee Name|Customer Name|Client Name|User Name|Full Name|"
@@ -73,6 +84,24 @@ def detect_and_redact_pii(text: str) -> dict[str, Any]:
         )
 
     cleaned_text = PHONE_PATTERN.sub("[REDACTED_PHONE]", cleaned_text)
+
+    def replace_labelled_employee_id(match: re.Match[str]) -> str:
+        label = match.group("label")
+        employee_id = match.group("employee_id")
+
+        detected_pii.append(
+            {
+                "type": "EMPLOYEE_ID",
+                "value": employee_id,
+            }
+        )
+
+        return f"{label}: [REDACTED_EMPLOYEE_ID]"
+
+    cleaned_text = LABELLED_EMPLOYEE_ID_PATTERN.sub(
+        replace_labelled_employee_id,
+        cleaned_text,
+    )
 
     for match in EMPLOYEE_ID_PATTERN.finditer(cleaned_text):
         detected_pii.append(

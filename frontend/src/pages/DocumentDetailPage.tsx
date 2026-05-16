@@ -346,7 +346,11 @@ export function DocumentDetailPage({
     knowledgeAvailable,
   );
 
-  const canTakeAdminAction = displayStatus === "PAUSED";
+  const canTakeAdminAction =
+    document?.status === "PAUSED" ||
+    document?.status === "WAITING_FOR_ADMIN" ||
+    document?.database_status === "PAUSED" ||
+    document?.database_status === "WAITING_FOR_ADMIN";
 
   return (
     <section className="page-section">
