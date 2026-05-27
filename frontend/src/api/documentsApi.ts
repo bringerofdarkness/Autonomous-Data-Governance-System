@@ -79,10 +79,12 @@ export type DocumentQdrantChunksResponse = {
   message: string;
 };
 
-export function getDocuments(
-  token: string,
-  filters: DocumentListFilters,
-) {
+export type AdminDecisionPayload = {
+  decision: "approve" | "reject";
+};
+
+// 1. Fetch filtered document list
+export function getDocuments(token: string, filters: DocumentListFilters) {
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
@@ -94,31 +96,56 @@ export function getDocuments(
   const queryString = params.toString();
   const path = queryString ? `/documents?${queryString}` : "/documents";
 
-  return apiRequest<DocumentListItem[]>(path, {
-    token,
-  });
+  return apiRequest<DocumentListItem[]>(path, { token });
 }
 
+// 2. Fetch specific document status
 export function getDocumentStatus(token: string, documentId: string) {
   return apiRequest<DocumentStatusDetail>(`/documents/${documentId}/status`, {
     token,
   });
 }
 
+// 3. Fetch audit logs
 export function getDocumentAuditLogs(token: string, documentId: string) {
   return apiRequest<DocumentAuditLog[]>(
     `/documents/${documentId}/audit-logs?limit=50&offset=0`,
-    {
-      token,
-    },
+    { token }
   );
 }
 
+// 4. Fetch indexed chunks from Qdrant
 export function getDocumentQdrantChunks(token: string, documentId: string) {
   return apiRequest<DocumentQdrantChunksResponse>(
     `/documents/${documentId}/qdrant-chunks?limit=20`,
+    { token }
+  );
+}
+
+// 5. Upload document (Uses FormData now correctly supported by client)
+export function uploadDocument(token: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<DocumentListItem>("/documents/upload", {
+    method: "POST",
+    token,
+    body: formData,
+  });
+}
+
+// 6. Resume LangGraph workflow via HITL interaction node
+export function resumeDocumentWorkflow(
+  token: string,
+  documentId: string,
+  payload: AdminDecisionPayload
+) {
+  return apiRequest<{ message: string; status: string }>(
+    `/documents/${documentId}/resume`,
     {
+      method: "POST",
       token,
-    },
+      body: payload, // Notice: No JSON.stringify here anymore! Passed as raw object.
+    }
   );
 }

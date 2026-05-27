@@ -3,6 +3,7 @@ import {
   getDocumentAuditLogs,
   getDocumentQdrantChunks,
   getDocumentStatus,
+  resumeDocumentWorkflow, // FIXED: Explicitly imported from our clean API layer
   type DocumentAuditLog,
   type DocumentQdrantChunksResponse,
   type DocumentStatusDetail,
@@ -12,7 +13,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
-
   return null;
 }
 
@@ -63,7 +63,6 @@ function humanizeAction(action: string) {
     DOCUMENT_INDEXED_IN_QDRANT: "Added to trusted knowledge base",
     DOCUMENT_QDRANT_INTEGRITY_REPAIRED: "Knowledge base record repaired",
   };
-
   return labels[action] || action.replaceAll("_", " ");
 }
 
@@ -71,32 +70,26 @@ function getActionMessage(
   status: string,
   riskScore: number | null | undefined,
   conflictFound: boolean,
-  knowledgeAvailable: boolean,
+  knowledgeAvailable: boolean
 ) {
   if (status === "PAUSED") {
     return "This document is paused because it contains sensitive information or a possible data contradiction. An Admin must review it before employees can use it as trusted company knowledge.";
   }
-
   if (status === "WAITING_FOR_ADMIN") {
     return "This document is waiting for Admin review before it can become trusted company knowledge.";
   }
-
   if (status === "APPROVED" && knowledgeAvailable) {
     return "This document has been approved and is already available in the trusted company knowledge base.";
   }
-
   if (status === "APPROVED" && !knowledgeAvailable) {
     return "This document is approved, but it has not yet been added to the trusted company knowledge base.";
   }
-
   if (status === "REJECTED") {
     return "This document was rejected and should not be used as trusted company knowledge.";
   }
-
   if ((riskScore ?? 0) >= 75 || conflictFound) {
     return "This document contains high-risk governance signals and should be reviewed carefully before use.";
   }
-
   return "No immediate governance action is required.";
 }
 
@@ -109,15 +102,12 @@ export function DocumentDetailPage({
 }) {
   const [document, setDocument] = useState<DocumentStatusDetail | null>(null);
   const [auditLogs, setAuditLogs] = useState<DocumentAuditLog[]>([]);
-  const [qdrantChunks, setQdrantChunks] =
-    useState<DocumentQdrantChunksResponse | null>(null);
+  const [qdrantChunks, setQdrantChunks] = useState<DocumentQdrantChunksResponse | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [adminActionLoading, setAdminActionLoading] = useState<
-    "approve" | "reject" | null
-  >(null);
+  const [adminActionLoading, setAdminActionLoading] = useState<"approve" | "reject" | null>(null);
   const [adminActionMessage, setAdminActionMessage] = useState("");
   const [adminActionError, setAdminActionError] = useState("");
 
@@ -151,9 +141,7 @@ export function DocumentDetailPage({
       setAuditLogs([]);
       setQdrantChunks(null);
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not load document detail.",
+        error instanceof Error ? error.message : "Could not load document detail."
       );
     } finally {
       setLoading(false);
@@ -172,47 +160,19 @@ export function DocumentDetailPage({
         throw new Error("Please login again before taking an Admin action.");
       }
 
-      const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-
-      const response = await fetch(
-        `${apiBaseUrl}/documents/${documentId}/resume`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            decision,
-            reason:
-              decision === "approve"
-                ? "Approved via Frontend Dashboard"
-                : "Rejected via Frontend Dashboard",
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        throw new Error(
-          errorText || `Admin action failed with status ${response.status}`,
-        );
-      }
+      // Safe processing via production-grade client layer
+      await resumeDocumentWorkflow(token, documentId, { decision });
 
       setAdminActionMessage(
         decision === "approve"
           ? "Document approved successfully. Refreshing review..."
-          : "Document rejected successfully. Refreshing review...",
+          : "Document rejected successfully. Refreshing review..."
       );
 
       await loadDetail();
     } catch (error) {
       setAdminActionError(
-        error instanceof Error
-          ? error.message
-          : "Could not complete Admin action.",
+        error instanceof Error ? error.message : "Could not complete Admin action."
       );
     } finally {
       setAdminActionLoading(null);
@@ -245,7 +205,6 @@ export function DocumentDetailPage({
 
         try {
           const chunksResult = await getDocumentQdrantChunks(token, documentId);
-
           if (isMounted) {
             setQdrantChunks(chunksResult);
           }
@@ -261,9 +220,7 @@ export function DocumentDetailPage({
         setAuditLogs([]);
         setQdrantChunks(null);
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Could not load document detail.",
+          error instanceof Error ? error.message : "Could not load document detail."
         );
       } finally {
         if (isMounted) {
@@ -297,11 +254,11 @@ export function DocumentDetailPage({
       .filter((item): item is Record<string, unknown> => item !== null);
 
     const governanceNotes = asArray(structuredProfile?.governance_notes).filter(
-      (item): item is string => typeof item === "string",
+      (item): item is string => typeof item === "string"
     );
 
     const riskFactors = asArray(riskResult?.risk_factors).filter(
-      (item): item is string => typeof item === "string",
+      (item): item is string => typeof item === "string"
     );
 
     return {
@@ -315,8 +272,7 @@ export function DocumentDetailPage({
   }, [auditLogs]);
 
   const orderedAuditLogs = [...auditLogs].sort(
-    (a, b) =>
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 
   if (loading && !document) {
@@ -327,30 +283,19 @@ export function DocumentDetailPage({
     );
   }
 
-  const displayStatus =
-    document?.status || document?.database_status || "UNKNOWN";
-
+  const displayStatus = document?.status || document?.database_status || "UNKNOWN";
   const displayDocumentId = document?.document_id || document?.id || documentId;
-
-  const displayFilename =
-    document?.original_filename || qdrantChunks?.original_filename || "Document";
-
-  const knowledgeAvailable = Boolean(
-    document?.qdrant_point_id || qdrantChunks?.indexed,
-  );
-
+  const displayFilename = document?.original_filename || qdrantChunks?.original_filename || "Document";
+  const knowledgeAvailable = Boolean(document?.qdrant_point_id || qdrantChunks?.indexed);
   const actionMessage = getActionMessage(
     displayStatus,
     document?.risk_score,
     Boolean(document?.conflict_found),
-    knowledgeAvailable,
+    knowledgeAvailable
   );
 
   const canTakeAdminAction =
-    document?.status === "PAUSED" ||
-    document?.status === "WAITING_FOR_ADMIN" ||
-    document?.database_status === "PAUSED" ||
-    document?.database_status === "WAITING_FOR_ADMIN";
+    displayStatus === "PAUSED" || displayStatus === "WAITING_FOR_ADMIN";
 
   return (
     <section className="page-section">
@@ -358,7 +303,6 @@ export function DocumentDetailPage({
         <button className="secondary-button" onClick={onBack}>
           Back to Documents
         </button>
-
         <button className="primary-button" onClick={loadDetail} disabled={loading}>
           {loading ? "Refreshing..." : "Refresh Review"}
         </button>
@@ -383,7 +327,6 @@ export function DocumentDetailPage({
               <span className="review-status-badge">
                 {readableStatus(displayStatus)}
               </span>
-
               <span className="review-risk-badge">
                 {riskLabel(document.risk_score)}
               </span>
@@ -395,17 +338,14 @@ export function DocumentDetailPage({
               <span>Current Status</span>
               <strong>{readableStatus(displayStatus)}</strong>
             </div>
-
             <div className="review-summary-card review-summary-danger">
               <span>Risk Level</span>
               <strong>{riskLabel(document.risk_score)}</strong>
             </div>
-
             <div className="review-summary-card review-summary-orange">
               <span>Data Contradiction</span>
               <strong>{document.conflict_found ? "Yes" : "No"}</strong>
             </div>
-
             <div className="review-summary-card review-summary-neutral">
               <span>Trusted Knowledge</span>
               <strong>{knowledgeAvailable ? "Available" : "Not Available"}</strong>
@@ -420,9 +360,7 @@ export function DocumentDetailPage({
           {canTakeAdminAction && (
             <div className="review-admin-actions">
               <div>
-                <p className="review-admin-actions-label">
-                  Admin Decision Required
-                </p>
+                <p className="review-admin-actions-label">Admin Decision Required</p>
                 <h3>Review this document before it becomes trusted knowledge</h3>
                 <p>
                   Approving will continue the governance workflow. Rejecting will
@@ -437,9 +375,7 @@ export function DocumentDetailPage({
                   disabled={adminActionLoading !== null}
                   onClick={() => void handleAdminDecision("approve")}
                 >
-                  {adminActionLoading === "approve"
-                    ? "Approving..."
-                    : "Approve Document"}
+                  {adminActionLoading === "approve" ? "Approving..." : "Approve Document"}
                 </button>
 
                 <button
@@ -448,42 +384,31 @@ export function DocumentDetailPage({
                   disabled={adminActionLoading !== null}
                   onClick={() => void handleAdminDecision("reject")}
                 >
-                  {adminActionLoading === "reject"
-                    ? "Rejecting..."
-                    : "Reject Document"}
+                  {adminActionLoading === "reject" ? "Rejecting..." : "Reject Document"}
                 </button>
               </div>
 
-              {adminActionMessage && (
-                <p className="review-admin-success">{adminActionMessage}</p>
-              )}
-
-              {adminActionError && (
-                <p className="review-admin-error">{adminActionError}</p>
-              )}
+              {adminActionMessage && <p className="review-admin-success">{adminActionMessage}</p>}
+              {adminActionError && <p className="review-admin-error">{adminActionError}</p>}
             </div>
           )}
 
           <div className="review-main-grid">
             <div className="review-panel">
               <h3>Document Information</h3>
-
               <dl className="review-definition-list">
                 <div>
                   <dt>Document ID</dt>
                   <dd>{displayDocumentId}</dd>
                 </div>
-
                 <div>
                   <dt>Category</dt>
                   <dd>{document.document_category || "-"}</dd>
                 </div>
-
                 <div>
                   <dt>Created</dt>
                   <dd>{formatDate(document.created_at)}</dd>
                 </div>
-
                 <div>
                   <dt>Processing Message</dt>
                   <dd>{document.error_message || "No active processing error."}</dd>
@@ -500,13 +425,11 @@ export function DocumentDetailPage({
                     item(s). Raw sensitive values are not stored in audit logs.
                   </p>
                 </div>
-
                 <span className="review-pii-alert">PII Detected</span>
               </div>
 
               <div className="review-chip-grid">
-                {governanceData.piiTypes &&
-                Object.entries(governanceData.piiTypes).length > 0 ? (
+                {governanceData.piiTypes && Object.entries(governanceData.piiTypes).length > 0 ? (
                   Object.entries(governanceData.piiTypes).map(([type, count]) => (
                     <div className="review-pii-chip" key={type}>
                       <span>{type.replaceAll("_", " ")}</span>
@@ -519,30 +442,22 @@ export function DocumentDetailPage({
               </div>
 
               <h4 className="review-subtitle">Sensitive Fields</h4>
-
               <div className="review-field-table">
                 <div className="review-field-header">
                   <span>Field Name</span>
                   <span>Type</span>
                 </div>
-
                 {governanceData.sensitiveFields.length > 0 ? (
                   governanceData.sensitiveFields.map((field, index) => (
-                    <div
-                      className="review-field-row"
-                      key={`${String(field.field_name)}-${index}`}
-                    >
+                    <div className="review-field-row" key={`${String(field.field_name)}-${index}`}>
                       <span>{asString(field.field_name) || "Unknown field"}</span>
                       <strong>
-                        {asString(field.sensitivity_type)?.replaceAll("_", " ") ||
-                          "Sensitive"}
+                        {asString(field.sensitivity_type)?.replaceAll("_", " ") || "Sensitive"}
                       </strong>
                     </div>
                   ))
                 ) : (
-                  <div className="review-field-empty">
-                    No structured sensitive fields available.
-                  </div>
+                  <div className="review-field-empty">No structured sensitive fields available.</div>
                 )}
               </div>
             </div>
@@ -551,7 +466,6 @@ export function DocumentDetailPage({
           <div className="review-main-grid">
             <div className="review-panel">
               <h3>Why this document is risky</h3>
-
               {governanceData.riskFactors.length > 0 ? (
                 <ul className="review-risk-list">
                   {governanceData.riskFactors.map((factor) => (
@@ -562,33 +476,24 @@ export function DocumentDetailPage({
                 <p className="review-muted">No risk factor breakdown available.</p>
               )}
 
-              {governanceData.scoreBreakdown &&
-                Object.entries(governanceData.scoreBreakdown).length > 0 && (
-                  <div className="review-score-grid">
-                    {Object.entries(governanceData.scoreBreakdown).map(
-                      ([key, value]) => (
-                        <div className="review-score-box" key={key}>
-                          <span>{key.replaceAll("_", " ")}</span>
-                          <strong>{String(value)}</strong>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                )}
+              {governanceData.scoreBreakdown && Object.entries(governanceData.scoreBreakdown).length > 0 && (
+                <div className="review-score-grid">
+                  {Object.entries(governanceData.scoreBreakdown).map(([key, value]) => (
+                    <div className="review-score-box" key={key}>
+                      <span>{key.replaceAll("_", " ")}</span>
+                      <strong>{String(value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="review-panel">
               <h3>Data Contradiction</h3>
-
               <div className="review-conflict-card">
-                <strong>
-                  {document.conflict_found
-                    ? "Contradiction Found"
-                    : "No Contradiction"}
-                </strong>
+                <strong>{document.conflict_found ? "Contradiction Found" : "No Contradiction"}</strong>
                 <p>
-                  {document.conflict_summary ||
-                    "No contradiction summary was provided by the governance engine."}
+                  {document.conflict_summary || "No contradiction summary was provided by the governance engine."}
                 </p>
               </div>
             </div>
@@ -600,7 +505,6 @@ export function DocumentDetailPage({
                 <h3>Governance Notes</h3>
                 <span>{governanceData.governanceNotes.length} note(s)</span>
               </div>
-
               <div className="review-note-list">
                 {governanceData.governanceNotes.map((note, index) => (
                   <div className="review-note-card" key={`${note}-${index}`}>
@@ -627,13 +531,11 @@ export function DocumentDetailPage({
                 orderedAuditLogs.map((log, index) => (
                   <div className="review-timeline-item" key={log.id}>
                     <div className="review-timeline-number">{index + 1}</div>
-
                     <div className="review-timeline-card">
                       <div className="review-timeline-header">
                         <strong>{humanizeAction(log.action)}</strong>
                         <span>{formatDate(log.created_at)}</span>
                       </div>
-
                       <p>{log.message || "No message provided."}</p>
                     </div>
                   </div>
@@ -646,10 +548,7 @@ export function DocumentDetailPage({
             <div className="review-section-title-row">
               <div>
                 <h3>Trusted Knowledge Preview</h3>
-                <p>
-                  Only approved and redacted content should become searchable
-                  company knowledge.
-                </p>
+                <p>Only approved and redacted content should become searchable company knowledge.</p>
               </div>
               <span>{qdrantChunks?.chunks_count ?? 0} chunk(s)</span>
             </div>
@@ -662,16 +561,14 @@ export function DocumentDetailPage({
                       <strong>Chunk {chunk.chunk_index ?? "-"}</strong>
                       <span>{chunk.char_count ?? 0} characters</span>
                     </div>
-
                     <p>{chunk.chunk_text || "No chunk text available."}</p>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="review-empty-state">
-                This document is not currently available in the trusted
-                knowledge base. It must be approved before employees can use it
-                as trusted company knowledge.
+                This document is not currently available in the trusted knowledge base. It must be approved before employees
+                can use it as trusted company knowledge.
               </div>
             )}
           </div>

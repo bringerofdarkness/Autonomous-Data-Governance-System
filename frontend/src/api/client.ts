@@ -2,35 +2,58 @@
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  body?: unknown;
+  body?: unknown; // Expect raw objects or FormData, never pre-stringified strings
   token?: string | null;
 };
 
 export async function apiRequest<T>(
   path: string,
-  options: RequestOptions = {},
+  options: RequestOptions = {}
 ): Promise<T> {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
 
+  // Set Authorization header if token exists
   if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
+    headers["Authorization"] = `Bearer ${options.token}`;
+  }
+
+  let requestBody: BodyInit | undefined = undefined;
+
+  // Dynamically determine headers and body formatting based on payload type
+  if (options.body !== undefined) {
+    if (options.body instanceof FormData) {
+      // For FormData uploads, the browser must set the multipart boundary automatically.
+      // Explicitly leaving Content-Type empty lets the browser insert the boundary tag.
+      requestBody = options.body;
+    } else {
+      // Safe fallback for standard JSON objects
+      headers["Content-Type"] = "application/json";
+      requestBody = JSON.stringify(options.body);
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method || "GET",
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: requestBody,
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorMessage = `API request failed with status ${response.status}`;
+    try {
+      // Attempt to parse structured error details from FastAPI if available
+      const errorJson = await response.json();
+      errorMessage = errorJson?.detail || JSON.stringify(errorJson) || errorMessage;
+    } catch {
+      // Fallback if the response is raw text instead of JSON
+      const errorText = await response.text();
+      if (errorText) errorMessage = errorText;
+    }
 
-    throw new Error(
-      errorText || `API request failed with status ${response.status}`,
-    );
+    throw new Error(errorMessage);
   }
 
-  return response.json() as Promise<T>;
+  // Handle successful empty responses safely
+  const responseText = await response.text();
+  return responseText ? (JSON.parse(responseText) as T) : ({} as T);
 }

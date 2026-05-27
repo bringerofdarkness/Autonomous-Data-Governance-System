@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import {
   getDocuments,
+  uploadDocument, // FIXED: Integrated corporate ingestion hook
   type DocumentListFilters,
   type DocumentListItem,
 } from "../api/documentsApi";
@@ -55,36 +56,14 @@ function booleanBadgeClass(value: boolean, positiveLabel: string) {
       ? "boolean-badge boolean-success"
       : "boolean-badge boolean-danger";
   }
-
   return "boolean-badge boolean-muted";
 }
 
 function getRiskScoreRange(riskLevel: RiskLevelFilter) {
-  if (riskLevel === "low") {
-    return {
-      min_risk_score: "0",
-      max_risk_score: "39",
-    };
-  }
-
-  if (riskLevel === "medium") {
-    return {
-      min_risk_score: "40",
-      max_risk_score: "74",
-    };
-  }
-
-  if (riskLevel === "high") {
-    return {
-      min_risk_score: "75",
-      max_risk_score: "100",
-    };
-  }
-
-  return {
-    min_risk_score: "",
-    max_risk_score: "",
-  };
+  if (riskLevel === "low") return { min_risk_score: "0", max_risk_score: "39" };
+  if (riskLevel === "medium") return { min_risk_score: "40", max_risk_score: "74" };
+  if (riskLevel === "high") return { min_risk_score: "75", max_risk_score: "100" };
+  return { min_risk_score: "", max_risk_score: "" };
 }
 
 export function DocumentsPage({
@@ -97,11 +76,12 @@ export function DocumentsPage({
   const [errorMessage, setErrorMessage] = useState("");
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  const [riskLevel, setRiskLevel] = useState<RiskLevelFilter>("");
+  // Upload Interaction States
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState("");
 
-  const [filters, setFilters] = useState<DocumentListFilters>({
-    ...DEFAULT_FILTERS,
-  });
+  const [riskLevel, setRiskLevel] = useState<RiskLevelFilter>("");
+  const [filters, setFilters] = useState<DocumentListFilters>({ ...DEFAULT_FILTERS });
 
   function updateFilter(key: keyof DocumentListFilters, value: string) {
     setFilters((current) => ({
@@ -112,10 +92,9 @@ export function DocumentsPage({
 
   function buildApiFilters(
     activeFilters: DocumentListFilters,
-    activeRiskLevel: RiskLevelFilter,
+    activeRiskLevel: RiskLevelFilter
   ): DocumentListFilters {
     const riskRange = getRiskScoreRange(activeRiskLevel);
-
     return {
       ...activeFilters,
       min_risk_score: riskRange.min_risk_score,
@@ -127,12 +106,11 @@ export function DocumentsPage({
 
   async function loadDocuments(
     activeFilters: DocumentListFilters = filters,
-    activeRiskLevel: RiskLevelFilter = riskLevel,
+    activeRiskLevel: RiskLevelFilter = riskLevel
   ) {
     try {
       setLoading(true);
       setErrorMessage("");
-
       const token = localStorage.getItem("adgs_access_token");
 
       if (!token) {
@@ -141,76 +119,83 @@ export function DocumentsPage({
 
       const apiFilters = buildApiFilters(activeFilters, activeRiskLevel);
       const data = await getDocuments(token, apiFilters);
-
       setDocuments(data);
       setHasLoadedOnce(true);
     } catch (error) {
       setDocuments([]);
       setHasLoadedOnce(true);
-      setErrorMessage(
-        error instanceof Error ? error.message : "Could not load documents.",
-      );
+      setErrorMessage(error instanceof Error ? error.message : "Could not load documents.");
     } finally {
       setLoading(false);
     }
   }
 
-  function resetFilters() {
-    const resetFilterValues = {
-      ...DEFAULT_FILTERS,
-    };
+  // Handle Enterprise Multi-part Document Ingestion
+  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    setFilters(resetFilterValues);
-    setRiskLevel("");
-
-    void loadDocuments(resetFilterValues, "");
-  }
-
-useEffect(() => {
-  let isMounted = true;
-
-  async function autoLoadDocuments() {
     try {
-      setLoading(true);
+      setUploading(true);
       setErrorMessage("");
+      setUploadSuccess("");
 
       const token = localStorage.getItem("adgs_access_token");
-
       if (!token) {
-        throw new Error("Please login from the Dashboard page first.");
+        throw new Error("Authentication token missing. Please log in on the overview panel.");
       }
 
-      const data = await getDocuments(token, DEFAULT_FILTERS);
-
-      if (!isMounted) {
-        return;
-      }
-
-      setDocuments(data);
-      setHasLoadedOnce(true);
+      await uploadDocument(token, file);
+      setUploadSuccess(`"${file.name}" ingested into background queue successfully.`);
+      
+      // Auto refresh list to show newly uploaded entry in processing state
+      await loadDocuments();
     } catch (error) {
-      if (!isMounted) {
-        return;
-      }
-
-      setDocuments([]);
-      setHasLoadedOnce(true);
-      setErrorMessage(
-        error instanceof Error ? error.message : "Could not load documents.",
-      );
+      setErrorMessage(error instanceof Error ? error.message : "File uploading process encountered a failure.");
     } finally {
-      if (isMounted) {
-        setLoading(false);
-      }
+      setUploading(false);
+      // Clean up input element completely
+      event.target.value = "";
     }
   }
 
-  void autoLoadDocuments();
+  function resetFilters() {
+    const resetFilterValues = { ...DEFAULT_FILTERS };
+    setFilters(resetFilterValues);
+    setRiskLevel("");
+    void loadDocuments(resetFilterValues, "");
+  }
 
-  return () => {
-    isMounted = false;
-  };
-}, []);
+  useEffect(() => {
+    let isMounted = true;
+    async function autoLoadDocuments() {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+        const token = localStorage.getItem("adgs_access_token");
+        if (!token) {
+          throw new Error("Please login from the Dashboard page first.");
+        }
+
+        const data = await getDocuments(token, DEFAULT_FILTERS);
+        if (!isMounted) return;
+        setDocuments(data);
+        setHasLoadedOnce(true);
+      } catch (error) {
+        if (!isMounted) return;
+        setDocuments([]);
+        setHasLoadedOnce(true);
+        setErrorMessage(error instanceof Error ? error.message : "Could not load documents.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    void autoLoadDocuments();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="page-section">
@@ -222,9 +207,33 @@ useEffect(() => {
             contradictions, and knowledge base availability.
           </p>
         </div>
-
         <div className="system-pill">
           {loading ? "Loading..." : `${documents.length} Loaded`}
+        </div>
+      </div>
+
+      {/* INGESTION SERVICE ZONE */}
+      <div className="filter-card" style={{ marginBottom: "20px" }}>
+        <div className="table-header" style={{ marginBottom: "15px" }}>
+          <h2>Ingest New Corporate Asset</h2>
+          <p>Files will execute asynchronously inside the automated governance pipeline.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <input
+            type="file"
+            id="adgs-uploader"
+            onChange={(e) => void handleFileUpload(e)}
+            disabled={uploading}
+            style={{ display: "none" }}
+          />
+          <label
+            htmlFor="adgs-uploader"
+            className="primary-button"
+            style={{ cursor: uploading ? "not-allowed" : "pointer" }}
+          >
+            {uploading ? "Ingesting Asset..." : "Select File to Ingest"}
+          </label>
+          {uploadSuccess && <span style={{ color: "#2e7d32", fontSize: "14px", fontWeight: 500 }}>{uploadSuccess}</span>}
         </div>
       </div>
 
@@ -251,9 +260,7 @@ useEffect(() => {
             <label>Document Category</label>
             <input
               value={filters.document_category}
-              onChange={(event) =>
-                updateFilter("document_category", event.target.value)
-              }
+              onChange={(event) => updateFilter("document_category", event.target.value)}
               placeholder="Policy"
             />
           </div>
@@ -262,9 +269,7 @@ useEffect(() => {
             <label>Risk Level</label>
             <select
               value={riskLevel}
-              onChange={(event) =>
-                setRiskLevel(event.target.value as RiskLevelFilter)
-              }
+              onChange={(event) => setRiskLevel(event.target.value as RiskLevelFilter)}
             >
               <option value="">All</option>
               <option value="low">Low Risk (0-39)</option>
@@ -277,9 +282,7 @@ useEffect(() => {
             <label>Data Contradiction</label>
             <select
               value={filters.conflict_found}
-              onChange={(event) =>
-                updateFilter("conflict_found", event.target.value)
-              }
+              onChange={(event) => updateFilter("conflict_found", event.target.value)}
             >
               <option value="">All</option>
               <option value="true">Yes</option>
@@ -308,7 +311,6 @@ useEffect(() => {
           >
             {loading ? "Loading..." : "Apply Filters"}
           </button>
-
           <button className="secondary-button" onClick={resetFilters}>
             Reset Filters
           </button>
@@ -337,7 +339,6 @@ useEffect(() => {
                 <th>Action</th>
               </tr>
             </thead>
-
             <tbody>
               {documents.length === 0 ? (
                 <tr>
@@ -356,45 +357,28 @@ useEffect(() => {
                       <strong>{document.original_filename}</strong>
                       <span>{document.id}</span>
                     </td>
-
                     <td>
                       <span className={statusBadgeClass(document.status)}>
                         {document.status.replaceAll("_", " ")}
                       </span>
                     </td>
-
                     <td>{document.document_category || "-"}</td>
-
                     <td>
                       <span className={riskBadgeClass(document.risk_score)}>
                         {riskLabel(document.risk_score)}
                       </span>
                     </td>
-
                     <td>
-                      <span
-                        className={booleanBadgeClass(
-                          document.conflict_found,
-                          "Conflict",
-                        )}
-                      >
+                      <span className={booleanBadgeClass(document.conflict_found, "Conflict")}>
                         {document.conflict_found ? "Yes" : "No"}
                       </span>
                     </td>
-
                     <td>
-                      <span
-                        className={booleanBadgeClass(
-                          Boolean(document.qdrant_point_id),
-                          "Indexed",
-                        )}
-                      >
+                      <span className={booleanBadgeClass(Boolean(document.qdrant_point_id), "Indexed")}>
                         {document.qdrant_point_id ? "Available" : "Not Available"}
                       </span>
                     </td>
-
                     <td>{formatDate(document.created_at)}</td>
-
                     <td>
                       <button
                         className="mini-button"
