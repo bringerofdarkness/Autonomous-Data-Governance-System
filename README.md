@@ -15,25 +15,25 @@
 
 ## Overview
 
-The **Autonomous Data Governance System (ADGS)** is an enterprise-grade AI governance platform built to solve one of the biggest hidden problems in modern RAG pipelines:
+The **Autonomous Data Governance System (ADGS)** is an enterprise-focused AI governance platform designed to intercept, audit, scrub, validate, and govern multi-format files *before* they are allowed to enter a trusted vector database environment.
 
-> Organizations are pushing raw internal documents directly into vector databases without enforcing governance, compliance validation, or privacy isolation.
+Most Retrieval-Augmented Generation (RAG) systems directly embed raw organizational data into vector stores. That shortcut may work for demos, but in real enterprise environments it becomes a serious compliance and security problem.
 
-ADGS introduces a strict governance-first ingestion architecture where every uploaded document must pass through a controlled, auditable, asynchronous workflow before it can enter the trusted knowledge layer.
+ADGS was built around a different philosophy:
 
-Instead of treating vector databases like a dumping ground for enterprise data, ADGS treats them as **regulated production infrastructure**.
+> A vector database should behave like governed production infrastructure — not an uncontrolled document dumping ground.
 
-The platform combines:
+Every uploaded asset must pass through a stateful governance pipeline involving:
 
-- FastAPI asynchronous APIs
-- LangGraph stateful orchestration
-- Celery distributed workers
-- PostgreSQL checkpoint persistence
-- Qdrant semantic validation
-- React administrative dashboards
-- Automated PII scrubbing pipelines
+- multi-format parsing
+- metadata tracking
+- PII detection and scrubbing
+- semantic contradiction analysis
+- LangGraph checkpoint workflows
+- Human-in-the-Loop approval systems
+- audit-safe indexing boundaries
 
-to create a fully traceable governance system for AI-ready corporate knowledge bases.
+The platform combines asynchronous distributed architecture with governance-aware AI workflows to create a production-style compliance layer for enterprise knowledge systems.
 
 ---
 
@@ -42,11 +42,11 @@ to create a fully traceable governance system for AI-ready corporate knowledge b
 - [Core Problem](#core-problem)
 - [Project Objective](#project-objective)
 - [System Architecture](#system-architecture)
-- [Asynchronous Processing Lifecycle](#asynchronous-processing-lifecycle)
+- [Asynchronous Workflow Lifecycle](#asynchronous-workflow-lifecycle)
 - [Technology Stack](#technology-stack)
+- [Multi-Format Document Processing](#multi-format-document-processing)
 - [Core Features](#core-features)
-- [Governance Workflow](#governance-workflow)
-- [Document State Lifecycle](#document-state-lifecycle)
+- [Document Lifecycle](#document-lifecycle)
 - [API Blueprint](#api-blueprint)
 - [Local Development Setup](#local-development-setup)
 - [Roadmap](#roadmap)
@@ -58,199 +58,212 @@ to create a fully traceable governance system for AI-ready corporate knowledge b
 
 # Core Problem
 
-Traditional Retrieval-Augmented Generation (RAG) systems usually follow a dangerous shortcut:
+Traditional RAG systems usually follow this pattern:
 
 ```text
-Upload Document -> Chunk -> Embed -> Store in Vector DB
+Upload Document
+    ↓
+Chunk Data
+    ↓
+Generate Embeddings
+    ↓
+Push Into Vector Database
 ```
 
-That sounds efficient.
+That workflow is simple.
 
-It is also a compliance nightmare.
+It is also dangerous.
 
-This architecture can accidentally expose:
+Without governance enforcement, organizations risk pushing:
 
 - Personally Identifiable Information (PII)
-- internal legal clauses
-- confidential employee records
-- outdated policy definitions
-- contradictory governance documents
-- regulated customer information
+- internal legal policies
+- payroll data
+- employee identifiers
+- confidential contracts
+- outdated compliance documents
+- contradictory corporate definitions
 
-inside production AI systems.
+directly into production AI retrieval systems.
 
-Once contaminated data enters the vector layer, downstream AI applications inherit those risks automatically.
+Once contaminated knowledge enters a vector database, downstream AI applications inherit those risks automatically.
 
-ADGS exists specifically to prevent that scenario.
+ADGS exists to stop that from happening.
 
 ---
 
 # Project Objective
 
-ADGS enforces a strict governance pipeline before knowledge-base indexing occurs.
+ADGS introduces a governance-first ingestion architecture for enterprise AI systems.
 
-No document is trusted automatically.
+No uploaded file is trusted automatically.
 
-Every uploaded asset moves through:
+Every document must pass through a controlled, auditable, asynchronous review pipeline before indexing occurs.
 
-- ingestion validation
-- metadata tracking
-- classification
-- PII detection
-- semantic contradiction analysis
-- human review checkpoints
-- approval enforcement
-- audit logging
+The system performs:
+
+- metadata registration
+- document extraction
+- structural parsing
+- PII mitigation
+- semantic conflict evaluation
+- governance scoring
+- checkpoint-based interruption
+- human review approval
+- audit tracking
 - controlled vector indexing
 
-The final goal is to create:
+The goal is to create AI-ready knowledge bases that remain:
 
-- compliant AI-ready datasets
-- explainable governance workflows
-- auditable document histories
-- safe vector database environments
-- production-grade enterprise AI infrastructure
+- compliant
+- explainable
+- auditable
+- isolated
+- production-safe
 
 ---
 
 # System Architecture
 
-The platform operates using an event-driven asynchronous architecture.
+The platform operates using a distributed asynchronous architecture designed for long-running AI workflows.
 
 ```text
-       [ React Administration Dashboard ] (Port 5173)
+       [ React UI Ingestion Client ] (Port 5173)
                     │             ▲
-    Multipart Upload│             │ Live Polling + Audit Timelines
-                    ▼             │
+    Multipart Binary│             │ Polling State Logs &
+    Asset Streaming ▼             │ Audit Registry Timelines
+
          [ FastAPI Gateway Layer ] (Port 8080)
                     │
                     ▼
-         [ Redis Broker Queue ]
+         [ Redis Shared Broker Queue ]
                     │
                     ▼
-       [ Celery Distributed Workers ]
+         [ Celery Asynchronous Workers ]
                     │
                     ▼
-      [ LangGraph Stateful Workflow ]
+         [ LangGraph Stateful Workflow ]
                     │
-                    ├──► Text Loader & Parsing
-                    ├──► Asset Classification
+                    ├──► Multi-Format Extraction Engine
+                    ├──► Corporate Asset Classification
                     ├──► PII Scrubbing Engine
                     ├──► Semantic Conflict Detection
-                    ├──► Governance Critic Evaluation
+                    ├──► Governance Critic Node
                     │
                     ▼
-      [ PostgreSQL Checkpoint Storage ]
-                    │
-          Workflow Interruption
+      [ PostgreSQL Checkpoint Persistence ]
                     │
                     ▼
-         [ Human Approval Layer ]
+         [ Human Review Interception ]
                     │
          ┌──────────┴──────────┐
          │                     │
          ▼                     ▼
-   APPROVED              REJECTED
+     APPROVED              REJECTED
          │
          ▼
-[ Qdrant Production Index ]
+ [ Qdrant Trusted Collection ]
 ```
 
 ---
 
-# Asynchronous Processing Lifecycle
+# Asynchronous Workflow Lifecycle
 
-Because embedding generation, semantic analysis, and governance validation are computationally expensive, ADGS separates ingestion from processing using asynchronous worker orchestration.
+Large-scale governance analysis is computationally expensive.
+
+Embedding generation, semantic comparison, multi-format extraction, and PII evaluation should never block frontend requests synchronously.
+
+ADGS solves this using an event-driven asynchronous workflow model.
 
 ---
 
-## 1. Upload Phase
+## 1. File Upload Phase
 
-The frontend streams a multipart document payload to:
+The frontend streams a multipart payload to:
 
 ```http
 POST /documents/upload
 ```
 
-The backend:
+The FastAPI layer:
 
-- stores metadata in PostgreSQL
-- generates a unique `document_id`
-- queues a background task in Redis
-- instantly returns a response to the client
+- registers metadata in PostgreSQL
+- assigns a unique `document_id`
+- pushes a task envelope into Redis
+- returns an immediate response to the client
 
-This keeps the UI responsive even for large uploads.
+This keeps the interface responsive even during heavy workloads.
 
 ---
 
-## 2. Worker Execution Phase
+## 2. Background Worker Execution
 
 A Celery worker claims the queued task and spins up an isolated LangGraph execution context.
 
-The graph begins processing:
+The orchestration engine begins:
 
-- extraction
-- classification
-- PII analysis
-- contradiction detection
-- governance evaluation
+- parsing files
+- extracting structured content
+- detecting PII
+- checking semantic conflicts
+- evaluating governance risk
 
-while continuously updating relational status records.
+while continuously updating relational state records.
 
 ---
 
-## 3. Stateful Governance Intercept
+## 3. Stateful Workflow Interruption
 
-If the system detects:
+If the governance engine detects:
 
-- high-risk PII
+- excessive PII exposure
 - contradictory clauses
-- suspicious governance patterns
-- compliance anomalies
+- suspicious semantic overlaps
+- policy conflicts
+- high-risk compliance patterns
 
-the LangGraph workflow intentionally pauses execution.
+the workflow intentionally pauses itself.
 
-The entire workflow state is checkpointed into PostgreSQL and the document status changes to:
+The active graph memory is serialized into PostgreSQL checkpoint tables and the document state changes to:
 
 ```text
 PAUSED
 ```
 
-This creates a recoverable governance checkpoint.
+This creates a recoverable governance checkpoint rather than blindly continuing execution.
 
 ---
 
-## 4. Human-in-the-Loop Approval
+## 4. Human-in-the-Loop Review
 
-Administrators review:
+The React administration dashboard monitors workflow states continuously.
 
-- audit timelines
-- semantic conflicts
+When a checkpoint interruption appears, administrators can inspect:
+
+- timeline logs
+- semantic conflict traces
 - risk explanations
 - scrubbed content previews
+- governance findings
 
-from the React dashboard.
+before deciding whether to:
 
-They can then:
-
-- approve the workflow
-- reject the workflow
+- approve the pipeline
+- reject the document
 - resume execution
-- terminate the pipeline
-
-without losing orchestration state.
+- terminate the workflow
 
 ---
 
-## 5. Production Indexing
+## 5. Trusted Vector Indexing
 
-Only approved assets are allowed into the trusted vector layer.
+Only approved documents are allowed into the trusted vector environment.
 
-Approved documents are:
+Approved assets are:
 
+- normalized
 - chunked
 - embedded
-- normalized
 - indexed into Qdrant
 
 for downstream retrieval systems.
@@ -259,103 +272,137 @@ for downstream retrieval systems.
 
 # Technology Stack
 
-| Domain | Technologies |
+| Domain | Technology |
 |---|---|
 | Backend API | FastAPI |
 | Workflow Orchestration | LangGraph |
-| Task Queue | Celery |
+| Queue System | Celery |
 | Broker Layer | Redis |
 | Database | PostgreSQL |
 | ORM | SQLAlchemy Async |
 | Migrations | Alembic |
 | Vector Database | Qdrant |
-| Embeddings | Sentence Transformers |
-| Frontend | React + Vite + TypeScript |
-| Containerization | Docker Compose |
+| Embeddings | sentence-transformers/all-MiniLM-L6-v2 |
+| Frontend | React + TypeScript + Vite |
 | Authentication | JWT + RBAC |
+| Containerization | Docker Compose |
+
+---
+
+# Multi-Format Document Processing
+
+One of the core goals of ADGS was building a deterministic ingestion layer capable of handling different enterprise file structures safely.
+
+The extraction subsystem processes files dynamically based on extension type.
+
+---
+
+## Supported Formats
+
+| Format | Processing Strategy |
+|---|---|
+| `.txt` | Raw text ingestion |
+| `.pdf` | Text-layer extraction using `pypdf` |
+| `.docx` | Structured parsing using `python-docx` |
+| `.csv` | Relational row serialization |
+| `.xlsx` | Spreadsheet flattening using `openpyxl` |
+| `.json` | Recursive tree flattening |
+
+---
+
+## Structured Table Handling
+
+CSV and Excel records are serialized into relational string structures like:
+
+```text
+Row 12:
+Department: Finance
+Manager: John Doe
+Budget: 2,000,000
+```
+
+This preserves relational meaning before vector indexing.
+
+---
+
+## JSON Tree Flattening
+
+Nested JSON configurations are recursively flattened into readable semantic paths:
+
+```text
+employee.department.name = Engineering
+employee.permissions.admin = true
+```
+
+This significantly improves embedding clarity for structured datasets.
+
+---
+
+## OCR-Aware Failure Detection
+
+If extraction layers return empty text payloads, the system flags the document for downstream OCR consideration instead of silently indexing empty vectors.
 
 ---
 
 # Core Features
 
-## Governance & AI Workflow Features
+## Stateful LangGraph Checkpoints
 
-### Stateful Workflow Interruptions
-
-LangGraph checkpoint persistence allows workflows to pause and resume without losing execution context.
+Workflow execution can pause and resume without losing orchestration state.
 
 ---
 
-### Automated PII Scrubbing
+## Automated PII Scrubbing
 
-The platform detects and sanitizes:
+The system detects and sanitizes:
 
 - emails
 - phone numbers
 - national IDs
-- employee references
-- explicit identity markers
+- employee identifiers
+- explicit identity references
 
-before vector indexing occurs.
-
----
-
-### Semantic Contradiction Detection
-
-Incoming assets are semantically compared against trusted vector corpora to detect conflicting governance definitions before approval.
+before indexing occurs.
 
 ---
 
-### Dual-Layer Vector Indexing
+## Semantic Conflict Detection
 
-The system stores:
+Incoming documents are semantically compared against existing trusted corpora to identify contradictory governance definitions.
+
+---
+
+## Dual-Layer Vector Storage
+
+The platform stores:
 
 - full-document vectors
 - chunk-level vectors
 
-to improve downstream retrieval precision.
+to improve retrieval precision.
 
 ---
 
-### Full Audit Traceability
+## Audit-Safe Logging
 
-Every workflow transition is stored relationally for compliance review and forensic inspection.
-
----
-
-# Governance Workflow
-
-```text
-Upload
-   │
-   ▼
-Metadata Registration
-   │
-   ▼
-Asynchronous Queue Dispatch
-   │
-   ▼
-LangGraph Orchestration
-   │
-   ├──► File Parsing
-   ├──► Classification
-   ├──► PII Scrubbing
-   ├──► Semantic Conflict Analysis
-   └──► Governance Evaluation
-   │
-   ▼
-Checkpoint Intercept
-   │
-   ├──► Approve
-   └──► Reject
-   │
-   ▼
-Production Vector Indexing
-```
+Relational audit trails track workflow transitions without exposing sensitive raw text inside logging structures.
 
 ---
 
-# Document State Lifecycle
+## React Administrative Dashboard
+
+The dashboard includes:
+
+- real-time governance metrics
+- ingestion monitoring
+- conflict inspection
+- audit timelines
+- vector previews
+- approval workflows
+
+---
+
+# Document Lifecycle
 
 ```text
 [ UPLOADED ]
@@ -363,7 +410,7 @@ Production Vector Indexing
        ▼
 [ PROCESSING ]
        │
-       ├──► Conflict / Risk Detected
+       ├──► Conflict / Risk Triggered
        │                │
        │                ▼
        │           [ PAUSED ]
@@ -387,23 +434,33 @@ Production Vector Indexing
 POST /auth/login
 ```
 
-Generates JWT authentication tokens.
+Generates JWT authorization tokens.
 
 ---
 
 ## Document Operations
 
+### Upload Documents
+
 ```http
 POST /documents/upload
 ```
 
-Secure multipart document upload.
+Secure multipart ingestion endpoint.
+
+---
+
+### Retrieve Documents
 
 ```http
 GET /documents
 ```
 
-Retrieve filtered document registries.
+Returns filtered document registries.
+
+---
+
+### Dashboard Metrics
 
 ```http
 GET /documents/summary
@@ -411,17 +468,29 @@ GET /documents/summary
 
 Aggregated governance dashboard metrics.
 
+---
+
+### Workflow Status
+
 ```http
 GET /documents/{document_id}/status
 ```
 
-Returns real-time workflow status.
+Returns live processing state information.
+
+---
+
+### Audit Logs
 
 ```http
 GET /documents/{document_id}/audit-logs
 ```
 
-Retrieves chronological audit timelines.
+Chronological governance timeline retrieval.
+
+---
+
+### Resume Workflow
 
 ```http
 POST /documents/{document_id}/resume
@@ -429,39 +498,45 @@ POST /documents/{document_id}/resume
 
 Resumes paused LangGraph execution.
 
+---
+
+### Administrative Approval
+
 ```http
 POST /documents/{document_id}/approve
 ```
 
-Administrative approval override.
+Immediate governance approval override.
+
+---
+
+### Administrative Rejection
 
 ```http
 POST /documents/{document_id}/reject
 ```
 
-Terminates the governance pipeline.
+Terminates the active workflow.
+
+---
+
+### Conflict Validation
 
 ```http
 POST /documents/{document_id}/conflict-check
 ```
 
-Runs forced semantic contradiction analysis.
+Triggers semantic contradiction analysis.
+
+---
+
+### Qdrant Vector Preview
 
 ```http
 GET /documents/{document_id}/qdrant-chunks
 ```
 
-Returns chunk-level vector metadata.
-
----
-
-## Vector Search
-
-```http
-POST /rag/search
-```
-
-Retrieval-only search endpoint over approved knowledge collections.
+Returns stored chunk metadata.
 
 ---
 
@@ -479,7 +554,7 @@ cd Autonomous-Data-Governance-System
 
 ## 2. Configure Environment Variables
 
-Create a `.env` file in the root directory using `.env.example`.
+Create a `.env` file in the project root using `.env.example`.
 
 Then create another `.env` inside the `frontend/` directory:
 
@@ -497,13 +572,13 @@ Ensure Docker Desktop is running.
 docker compose up -d
 ```
 
-Verify active containers:
+Verify services:
 
 ```bash
 docker compose ps
 ```
 
-Expected services:
+Expected active containers:
 
 - PostgreSQL
 - Redis
@@ -529,13 +604,13 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### Run Database Migrations
+### Run Migrations
 
 ```bash
 alembic upgrade head
 ```
 
-### Initialize LangGraph Checkpoint Tables
+### Initialize LangGraph Checkpoints
 
 ```bash
 python -m app.db.setup_langgraph_checkpoints
@@ -580,42 +655,44 @@ npm run dev
 # Roadmap
 
 ```text
-Phase 1  -> Backend Architecture Foundation                ✅ Completed
-Phase 2  -> Redis Queue + Upload Pipeline                  ✅ Completed
-Phase 3  -> Automated PII Scrubbing                        ✅ Completed
-Phase 4  -> Qdrant Conflict Validation                     ✅ Completed
-Phase 5  -> LangGraph PostgreSQL Checkpointing             ✅ Completed
-Phase 6  -> Chunk-Level Vector Architecture                ✅ Completed
-Phase 7  -> React Governance Dashboard                     ✅ Completed
-Phase 8  -> Multi-Format Extraction (PDF/CSV)              🔄 Planned
-Phase 9  -> Retrieval Synthesis & Generation Layer         🔄 Planned
+Phase 1  -> Backend Architecture Foundation                  ✅ Completed
+Phase 2  -> Redis Queue + Upload Pipelines                   ✅ Completed
+Phase 3  -> Automated PII Scrubbing Engine                   ✅ Completed
+Phase 4  -> Qdrant Conflict Detection                        ✅ Completed
+Phase 5  -> LangGraph PostgreSQL Checkpointing               ✅ Completed
+Phase 6  -> Chunk-Level Vector Ingestion                     ✅ Completed
+Phase 7  -> Multi-Format Parser Integration                  ✅ Completed
+Phase 8  -> Integrated React Governance Dashboard            ✅ Completed
+Phase 9  -> Retrieval Synthesis & Generation Layers          🔄 Planned
 ```
 
 ---
 
 # Security & Governance Principles
 
-## Separation of Raw Assets
+## Raw Asset Isolation
 
-Raw uploaded content is isolated from production retrieval systems.
-
----
-
-## PII Isolation Enforcement
-
-Unredacted sensitive strings are never indexed into vector collections.
+Raw uploaded files remain isolated from trusted retrieval collections.
 
 ---
 
-## Deterministic Checkpoint Recovery
+## PII Boundary Enforcement
 
-LangGraph execution states persist using database-backed thread identifiers for reliable recovery.
+Sensitive strings are never indexed directly into production vector stores.
 
 ---
 
-## Trusted Knowledge Boundaries
+## Deterministic Recovery
 
-Only approved assets inside trusted collections are searchable through retrieval endpoints.
+LangGraph execution states persist using database-backed thread identifiers, allowing safe recovery across crashes and reboots.
+
+---
+
+## Trusted Retrieval Boundaries
+
+Search endpoints only operate against approved vector collections.
+
+Unapproved assets remain fully isolated from downstream AI systems.
 
 ---
 
@@ -624,26 +701,26 @@ Only approved assets inside trusted collections are searchable through retrieval
 Most AI portfolio projects stop at:
 
 ```text
-Upload PDF -> Embed -> Chatbot
+Upload PDF → Embed → Chatbot
 ```
 
 ADGS focuses on the harder production problem:
 
-> How do you govern AI knowledge systems safely at enterprise scale?
+> How do you safely govern enterprise AI knowledge systems at scale?
 
-This project demonstrates practical engineering across:
+This project demonstrates engineering across:
 
-- asynchronous distributed systems
-- AI orchestration pipelines
-- governance-first architecture
-- vector infrastructure
+- distributed asynchronous systems
+- governance-aware AI infrastructure
+- LangGraph orchestration
+- vector database architecture
 - backend engineering
-- workflow checkpointing
-- compliance-aware retrieval systems
-- stateful orchestration
-- enterprise auditability
+- checkpoint recovery systems
+- enterprise audit workflows
+- semantic validation pipelines
+- production-style ingestion layers
 
-Instead of relying on thin wrappers or simplified demos, the platform was engineered like an internal enterprise system.
+Instead of being designed like a demo chatbot, ADGS was engineered like an internal enterprise platform.
 
 ---
 
@@ -659,9 +736,9 @@ Software Engineering & Data Science
 
 # Final Notes
 
-ADGS is not designed as a generic chatbot backend.
+ADGS is not just another RAG ingestion project.
 
-It is designed as a governance infrastructure layer that sits *before* enterprise AI systems — protecting retrieval pipelines from unsafe, contradictory, or non-compliant data before it ever reaches production vector environments.
+It is a governance infrastructure layer designed to sit *before* enterprise AI systems — protecting retrieval pipelines from unsafe, contradictory, or non-compliant knowledge before it reaches production vector environments.
 
 That separation is the entire philosophy behind the project.
 
