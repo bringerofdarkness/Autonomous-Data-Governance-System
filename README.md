@@ -1,683 +1,668 @@
 # Autonomous Data Governance System (ADGS)
 
-## Project Objective
+<div align="center">
 
-Autonomous Data Governance System (ADGS) is an AI-powered data governance backend designed to control how enterprise documents enter a trusted knowledge base.
+[![Backend API](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Workflow Orchestration](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg?style=flat-square)](https://github.com/langchain-ai/langgraph)
+[![Vector DB](https://img.shields.io/badge/VectorDB-Qdrant-red.svg?style=flat-square)](https://qdrant.tech/)
+[![Task Queue](https://img.shields.io/badge/Queue-Celery%20%26%20Redis-green.svg?style=flat-square&logo=celery&logoColor=white)](https://docs.celeryq.dev/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-336791.svg?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Frontend UI](https://img.shields.io/badge/Frontend-React%20%26%20Vite-61DAFB.svg?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 
-The main objective of this project is to build a governance-first AI pipeline where documents are not directly indexed into a vector database. Instead, every document must pass through a controlled process that includes metadata tracking, PII detection, redaction, conflict detection, human-in-the-loop review, audit logging, and final approval before it becomes part of an approved Gold Collection.
-
-This project is designed for organisations that need safer AI document processing, explainable approval workflows, and controlled retrieval-augmented generation over governed data.
-
-The long-term vision is to support both unstructured and structured data, including text files, PDFs, Word documents, CSV files, Excel files, and database exports.
-
----
-
-## Current Project Status
-
-This project currently implements a working backend MVP.
-
-The system can upload documents, process them asynchronously, detect and redact PII, check for conflicts against approved documents, pause the workflow for Admin review, resume the workflow through an API call, and safely index approved cleaned content into Qdrant.
-
-Current implementation is focused on `.txt` files to validate the full governance pipeline. Multi-format extraction for PDF, DOCX, CSV, and XLSX is planned next.
+</div>
 
 ---
 
-## Key Features Implemented
+## Overview
 
-- FastAPI backend API
-- JWT-based authentication
-- Role-based access control
-- PostgreSQL database integration
-- Alembic database migrations
-- Celery background processing
-- Redis task broker
-- LangGraph workflow orchestration
-- PostgreSQL checkpointing for LangGraph state persistence
-- Human-in-the-loop pause and resume workflow
-- PII detection and redaction
-- Cleaned text storage
-- Conflict detection using Qdrant vector search
-- Admin approval and rejection flow
-- Audit logging for governance traceability
-- Qdrant Gold Collection indexing
-- Local Hugging Face embedding model
-- Document-level and chunk-level vector indexing
-- Retrieval-only RAG search foundation
+The **Autonomous Data Governance System (ADGS)** is an enterprise-grade AI governance platform built to solve one of the biggest hidden problems in modern RAG pipelines:
+
+> Organizations are pushing raw internal documents directly into vector databases without enforcing governance, compliance validation, or privacy isolation.
+
+ADGS introduces a strict governance-first ingestion architecture where every uploaded document must pass through a controlled, auditable, asynchronous workflow before it can enter the trusted knowledge layer.
+
+Instead of treating vector databases like a dumping ground for enterprise data, ADGS treats them as **regulated production infrastructure**.
+
+The platform combines:
+
+- FastAPI asynchronous APIs
+- LangGraph stateful orchestration
+- Celery distributed workers
+- PostgreSQL checkpoint persistence
+- Qdrant semantic validation
+- React administrative dashboards
+- Automated PII scrubbing pipelines
+
+to create a fully traceable governance system for AI-ready corporate knowledge bases.
 
 ---
 
-## Tech Stack
+# Table of Contents
 
-| Area | Technology |
+- [Core Problem](#core-problem)
+- [Project Objective](#project-objective)
+- [System Architecture](#system-architecture)
+- [Asynchronous Processing Lifecycle](#asynchronous-processing-lifecycle)
+- [Technology Stack](#technology-stack)
+- [Core Features](#core-features)
+- [Governance Workflow](#governance-workflow)
+- [Document State Lifecycle](#document-state-lifecycle)
+- [API Blueprint](#api-blueprint)
+- [Local Development Setup](#local-development-setup)
+- [Roadmap](#roadmap)
+- [Security & Governance Principles](#security--governance-principles)
+- [Why This Project Matters](#why-this-project-matters)
+- [Author](#author)
+
+---
+
+# Core Problem
+
+Traditional Retrieval-Augmented Generation (RAG) systems usually follow a dangerous shortcut:
+
+```text
+Upload Document -> Chunk -> Embed -> Store in Vector DB
+```
+
+That sounds efficient.
+
+It is also a compliance nightmare.
+
+This architecture can accidentally expose:
+
+- Personally Identifiable Information (PII)
+- internal legal clauses
+- confidential employee records
+- outdated policy definitions
+- contradictory governance documents
+- regulated customer information
+
+inside production AI systems.
+
+Once contaminated data enters the vector layer, downstream AI applications inherit those risks automatically.
+
+ADGS exists specifically to prevent that scenario.
+
+---
+
+# Project Objective
+
+ADGS enforces a strict governance pipeline before knowledge-base indexing occurs.
+
+No document is trusted automatically.
+
+Every uploaded asset moves through:
+
+- ingestion validation
+- metadata tracking
+- classification
+- PII detection
+- semantic contradiction analysis
+- human review checkpoints
+- approval enforcement
+- audit logging
+- controlled vector indexing
+
+The final goal is to create:
+
+- compliant AI-ready datasets
+- explainable governance workflows
+- auditable document histories
+- safe vector database environments
+- production-grade enterprise AI infrastructure
+
+---
+
+# System Architecture
+
+The platform operates using an event-driven asynchronous architecture.
+
+```text
+       [ React Administration Dashboard ] (Port 5173)
+                    │             ▲
+    Multipart Upload│             │ Live Polling + Audit Timelines
+                    ▼             │
+         [ FastAPI Gateway Layer ] (Port 8080)
+                    │
+                    ▼
+         [ Redis Broker Queue ]
+                    │
+                    ▼
+       [ Celery Distributed Workers ]
+                    │
+                    ▼
+      [ LangGraph Stateful Workflow ]
+                    │
+                    ├──► Text Loader & Parsing
+                    ├──► Asset Classification
+                    ├──► PII Scrubbing Engine
+                    ├──► Semantic Conflict Detection
+                    ├──► Governance Critic Evaluation
+                    │
+                    ▼
+      [ PostgreSQL Checkpoint Storage ]
+                    │
+          Workflow Interruption
+                    │
+                    ▼
+         [ Human Approval Layer ]
+                    │
+         ┌──────────┴──────────┐
+         │                     │
+         ▼                     ▼
+   APPROVED              REJECTED
+         │
+         ▼
+[ Qdrant Production Index ]
+```
+
+---
+
+# Asynchronous Processing Lifecycle
+
+Because embedding generation, semantic analysis, and governance validation are computationally expensive, ADGS separates ingestion from processing using asynchronous worker orchestration.
+
+---
+
+## 1. Upload Phase
+
+The frontend streams a multipart document payload to:
+
+```http
+POST /documents/upload
+```
+
+The backend:
+
+- stores metadata in PostgreSQL
+- generates a unique `document_id`
+- queues a background task in Redis
+- instantly returns a response to the client
+
+This keeps the UI responsive even for large uploads.
+
+---
+
+## 2. Worker Execution Phase
+
+A Celery worker claims the queued task and spins up an isolated LangGraph execution context.
+
+The graph begins processing:
+
+- extraction
+- classification
+- PII analysis
+- contradiction detection
+- governance evaluation
+
+while continuously updating relational status records.
+
+---
+
+## 3. Stateful Governance Intercept
+
+If the system detects:
+
+- high-risk PII
+- contradictory clauses
+- suspicious governance patterns
+- compliance anomalies
+
+the LangGraph workflow intentionally pauses execution.
+
+The entire workflow state is checkpointed into PostgreSQL and the document status changes to:
+
+```text
+PAUSED
+```
+
+This creates a recoverable governance checkpoint.
+
+---
+
+## 4. Human-in-the-Loop Approval
+
+Administrators review:
+
+- audit timelines
+- semantic conflicts
+- risk explanations
+- scrubbed content previews
+
+from the React dashboard.
+
+They can then:
+
+- approve the workflow
+- reject the workflow
+- resume execution
+- terminate the pipeline
+
+without losing orchestration state.
+
+---
+
+## 5. Production Indexing
+
+Only approved assets are allowed into the trusted vector layer.
+
+Approved documents are:
+
+- chunked
+- embedded
+- normalized
+- indexed into Qdrant
+
+for downstream retrieval systems.
+
+---
+
+# Technology Stack
+
+| Domain | Technologies |
 |---|---|
 | Backend API | FastAPI |
-| Authentication | JWT |
-| Authorization | Role-Based Access Control |
+| Workflow Orchestration | LangGraph |
+| Task Queue | Celery |
+| Broker Layer | Redis |
 | Database | PostgreSQL |
 | ORM | SQLAlchemy Async |
 | Migrations | Alembic |
-| Background Jobs | Celery |
-| Message Broker | Redis |
-| Workflow Engine | LangGraph |
-| Workflow Persistence | LangGraph PostgreSQL Checkpointing |
 | Vector Database | Qdrant |
-| Embeddings | Hugging Face Sentence Transformers |
-| Local Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` |
-| Validation | Pydantic |
-| Container Services | Docker Compose |
-| Language | Python |
+| Embeddings | Sentence Transformers |
+| Frontend | React + Vite + TypeScript |
+| Containerization | Docker Compose |
+| Authentication | JWT + RBAC |
 
 ---
 
-## Why This Project Matters
+# Core Features
 
-Many RAG systems directly ingest and index documents into vector databases. That approach can be risky when documents contain sensitive information, personal data, conflicting business rules, or unapproved internal content.
+## Governance & AI Workflow Features
 
-ADGS follows a safer architecture:
+### Stateful Workflow Interruptions
 
-1. Raw documents are stored separately.
-2. PII is detected and redacted.
-3. Cleaned text is saved separately.
-4. Conflicts are checked against approved Gold Collection documents.
-5. High-risk or conflicting documents are paused for Admin review.
-6. Admin decisions are recorded through audit logs.
-7. Only approved cleaned content is indexed into Qdrant.
-8. RAG search runs only over approved governed content.
-
-This makes the system suitable for AI governance, compliance-focused document processing, and secure enterprise knowledge base preparation.
+LangGraph checkpoint persistence allows workflows to pause and resume without losing execution context.
 
 ---
 
-## High-Level System Architecture
+### Automated PII Scrubbing
+
+The platform detects and sanitizes:
+
+- emails
+- phone numbers
+- national IDs
+- employee references
+- explicit identity markers
+
+before vector indexing occurs.
+
+---
+
+### Semantic Contradiction Detection
+
+Incoming assets are semantically compared against trusted vector corpora to detect conflicting governance definitions before approval.
+
+---
+
+### Dual-Layer Vector Indexing
+
+The system stores:
+
+- full-document vectors
+- chunk-level vectors
+
+to improve downstream retrieval precision.
+
+---
+
+### Full Audit Traceability
+
+Every workflow transition is stored relationally for compliance review and forensic inspection.
+
+---
+
+# Governance Workflow
 
 ```text
-User Upload
-    ↓
-FastAPI API
-    ↓
-PostgreSQL Metadata Record
-    ↓
-Celery Background Task
-    ↓
-LangGraph Workflow
-    ↓
-PII Detection and Redaction
-    ↓
-Cleaned Text Storage
-    ↓
-Conflict Detection with Qdrant
-    ↓
-Human-in-the-Loop Pause if Needed
-    ↓
-Admin Resume / Approve / Reject
-    ↓
-Approved Cleaned Document
-    ↓
-Document-Level and Chunk-Level Qdrant Indexing
-    ↓
-Retrieval-Only RAG Search
+Upload
+   │
+   ▼
+Metadata Registration
+   │
+   ▼
+Asynchronous Queue Dispatch
+   │
+   ▼
+LangGraph Orchestration
+   │
+   ├──► File Parsing
+   ├──► Classification
+   ├──► PII Scrubbing
+   ├──► Semantic Conflict Analysis
+   └──► Governance Evaluation
+   │
+   ▼
+Checkpoint Intercept
+   │
+   ├──► Approve
+   └──► Reject
+   │
+   ▼
+Production Vector Indexing
 ```
 
 ---
 
-## Governance Workflow
-
-### 1. Document Upload
-
-A user uploads a document through the FastAPI API. The original file is saved in local storage, and metadata is stored in PostgreSQL.
-
-The document starts with the status:
+# Document State Lifecycle
 
 ```text
-UPLOADED
+[ UPLOADED ]
+       │
+       ▼
+[ PROCESSING ]
+       │
+       ├──► Conflict / Risk Detected
+       │                │
+       │                ▼
+       │           [ PAUSED ]
+       │                │
+       │        ┌───────┴───────┐
+       │        │               │
+       │        ▼               ▼
+       │   APPROVED         REJECTED
+       │
+       ▼
+[ QDRANT INDEXED ]
 ```
 
 ---
 
-### 2. Background Processing
+# API Blueprint
 
-Celery receives a processing task and runs the document through a LangGraph workflow.
+## Authentication
 
-The workflow currently includes:
-
-```text
-Text Loader
-↓
-Categorizer
-↓
-PII Scrubber
-↓
-Conflict Agent
-↓
-Critic
-↓
-HITL Review Node
-```
-
----
-
-### 3. PII Detection and Redaction
-
-The system detects and redacts sensitive information.
-
-Currently supported PII examples:
-
-- Email addresses
-- Phone numbers
-- Employee IDs
-- Labelled person names, such as `Employee Name: John Doe`
-
-The system saves a cleaned version of the document and avoids storing raw PII in audit logs.
-
----
-
-### 4. Conflict Detection
-
-The cleaned text is embedded locally using a Hugging Face sentence-transformer model.
-
-The vector is compared against existing approved documents in the Qdrant Gold Collection.
-
-If a similar document is found, the system marks:
-
-```text
-conflict_found = true
-```
-
-and stores a conflict summary.
-
----
-
-### 5. Human-in-the-Loop Review
-
-If a document is high-risk or has a detected conflict, the LangGraph workflow pauses using an interrupt.
-
-The paused state is persisted in PostgreSQL using LangGraph checkpointing.
-
-The document status becomes:
-
-```text
-PAUSED
-```
-
-An Admin can resume the workflow later using an API call with a decision:
-
-```text
-approve
-reject
-```
-
----
-
-### 6. Approval and Indexing
-
-Only approved cleaned documents can be indexed into Qdrant.
-
-If a document has a detected conflict, it must go through the HITL resume workflow before indexing.
-
-This prevents risky or conflicting documents from entering the Gold Collection without Admin review.
-
----
-
-## Document Status Lifecycle
-
-Documents can move through these statuses:
-
-```text
-UPLOADED
-PROCESSING
-PAUSED
-WAITING_FOR_ADMIN
-APPROVED
-REJECTED
-FAILED
-```
-
-Current HITL-based flow:
-
-```text
-UPLOADED
-↓
-PROCESSING
-↓
-PAUSED
-↓
-APPROVED or REJECTED
-↓
-Indexed into Qdrant if APPROVED
-```
-
----
-
-## LangGraph PostgreSQL Checkpointing
-
-This project uses LangGraph PostgreSQL checkpointing to persist workflow state.
-
-Each document workflow uses a stable thread ID:
-
-```text
-document:<document_id>
-```
-
-This allows the workflow to pause and resume later from the same saved state.
-
-This is useful for human-in-the-loop approval, failure recovery, and long-running governance workflows.
-
----
-
-## Qdrant Gold Collection
-
-Approved documents are indexed into a Qdrant collection:
-
-```text
-adgs_gold_documents
-```
-
-Current vector configuration:
-
-```text
-Vector size: 384
-Distance: COSINE
-Embedding model: sentence-transformers/all-MiniLM-L6-v2
-```
-
-The system supports both:
-
-```text
-Document-level vectors
-Chunk-level vectors
-```
-
-Chunk-level indexing prepares the system for efficient retrieval-augmented generation.
-
----
-
-## RAG Strategy
-
-The current RAG implementation is retrieval-only.
-
-No external LLM is required at this stage.
-
-The system uses local embeddings and Qdrant search to retrieve approved document chunks.
-
-Future LLM providers such as Gemini, Grok, or other APIs can be added later as optional answer-generation layers.
-
-The intended future RAG flow is:
-
-```text
-User question
-↓
-Local embedding
-↓
-Qdrant chunk search
-↓
-Top approved chunks
-↓
-Optional LLM answer generation
-```
-
-This design keeps token usage efficient because only relevant approved chunks will be sent to an LLM.
-
----
-
-## Current API Features
-
-### Authentication
-
-```text
+```http
 POST /auth/login
 ```
 
-### Documents
+Generates JWT authentication tokens.
 
-```text
+---
+
+## Document Operations
+
+```http
 POST /documents/upload
-GET  /documents
-GET  /documents/summary
-GET  /documents/{document_id}/status
-GET  /documents/{document_id}/task-status
-GET  /documents/{document_id}/audit-logs
-POST /documents/{document_id}/reprocess
+```
+
+Secure multipart document upload.
+
+```http
+GET /documents
+```
+
+Retrieve filtered document registries.
+
+```http
+GET /documents/summary
+```
+
+Aggregated governance dashboard metrics.
+
+```http
+GET /documents/{document_id}/status
+```
+
+Returns real-time workflow status.
+
+```http
+GET /documents/{document_id}/audit-logs
+```
+
+Retrieves chronological audit timelines.
+
+```http
 POST /documents/{document_id}/resume
+```
+
+Resumes paused LangGraph execution.
+
+```http
 POST /documents/{document_id}/approve
+```
+
+Administrative approval override.
+
+```http
 POST /documents/{document_id}/reject
-POST /documents/{document_id}/index
-GET  /documents/{document_id}/qdrant-point
-GET  /documents/{document_id}/qdrant-chunks
+```
+
+Terminates the governance pipeline.
+
+```http
 POST /documents/{document_id}/conflict-check
 ```
 
-### System
+Runs forced semantic contradiction analysis.
 
-```text
-GET  /system/qdrant-health
-POST /system/qdrant/gold-collection
+```http
+GET /documents/{document_id}/qdrant-chunks
 ```
 
-### RAG
+Returns chunk-level vector metadata.
 
-```text
+---
+
+## Vector Search
+
+```http
 POST /rag/search
 ```
 
----
-
-## Current Project Capabilities
-
-The project currently supports:
-
-- Secure document upload
-- Metadata tracking in PostgreSQL
-- Background document processing with Celery
-- Redis-based task queue
-- LangGraph-based workflow execution
-- PostgreSQL checkpoint persistence
-- Human-in-the-loop pause and resume
-- PII detection and redaction
-- Cleaned text file generation
-- Conflict detection against approved documents
-- Admin decision tracking
-- Audit logs for document lifecycle
-- Qdrant document indexing
-- Chunk-level vector indexing
-- Retrieval-only RAG search over approved chunks
+Retrieval-only search endpoint over approved knowledge collections.
 
 ---
 
-## What Has Been Completed
+# Local Development Setup
 
-### Backend Foundation
+## 1. Clone Repository
 
-- FastAPI app structure
-- Database models
-- Authentication
-- Role-based authorization
-- Docker Compose services
-- PostgreSQL connection
-- Redis connection
-- Qdrant connection
-- Alembic migrations
-
-### Document Governance
-
-- Upload endpoint
-- Document metadata table
-- Document status tracking
-- Celery task processing
-- Reprocess endpoint
-- Status endpoint
-- Summary endpoint
-
-### AI Workflow
-
-- LangGraph workflow
-- Text loading
-- Document categorization
-- PII scrubbing
-- Conflict detection
-- Critic decision logic
-- HITL pause node
-- HITL resume API
-
-### Governance and Auditability
-
-- Audit log table
-- Upload audit logs
-- Processing audit logs
-- PII detection logs
-- Conflict check logs
-- HITL pause logs
-- HITL approval/rejection logs
-- Qdrant indexing logs
-
-### Vector Search and RAG Foundation
-
-- Qdrant Gold Collection
-- Local Hugging Face embeddings
-- Document-level vector indexing
-- Chunk-level vector indexing
-- Qdrant point verification
-- Chunk verification endpoint
-- Retrieval-only RAG search foundation
-
----
-
-## Planned Improvements
-
-The following features are planned next:
-
-### 1. Multi-Format Extraction Layer
-
-Current processing is focused on `.txt` files.
-
-Planned support:
-
-- PDF
-- DOCX
-- CSV
-- XLSX
-- JSON
-- Scanned PDF with OCR later
-
-The planned architecture is:
-
-```text
-Raw File
-↓
-Extraction Service
-↓
-Normalized Text or Structured Profile
-↓
-Governance Workflow
-```
-
----
-
-### 2. Structured Data Governance
-
-For CSV and Excel files, the system will add:
-
-- Column-level profiling
-- Cell-level PII detection
-- Sensitive column detection
-- Structured risk scoring
-- Dataset-level governance summary
-
----
-
-### 3. Improved PII Detection
-
-Planned improvements:
-
-- Named entity recognition
-- More PII types
-- Address detection
-- National ID pattern support
-- Custom organisation-specific PII rules
-
----
-
-### 4. Advanced Conflict Explanation
-
-Current conflict detection uses similarity search.
-
-Planned improvements:
-
-- Chunk-level conflict explanation
-- Side-by-side comparison
-- Conflict category detection
-- Policy contradiction detection
-
----
-
-### 5. LLM Answer Generation
-
-Future optional LLM integrations:
-
-- Gemini API
-- Grok API
-- Local LLM through Ollama
-- Other provider-based models
-
-LLMs will be used only after retrieval to reduce token cost.
-
----
-
-### 6. Dashboard
-
-Planned dashboard options:
-
-- Streamlit dashboard
-- React frontend
-- Document status cards
-- Conflict review panel
-- HITL approval UI
-- Audit log viewer
-- Qdrant indexing status
-
----
-
-### 7. Testing and Production Hardening
-
-Planned improvements:
-
-- Unit tests
-- Integration tests
-- Dockerized FastAPI service
-- Dockerized Celery worker
-- CI/CD pipeline
-- Logging improvements
-- Error monitoring
-- Better configuration management
-
----
-
-## Local Development Setup
-
-### 1. Clone the repository
-
-```powershell
+```bash
 git clone https://github.com/bringerofdarkness/Autonomous-Data-Governance-System.git
+
 cd Autonomous-Data-Governance-System
 ```
 
-### 2. Create virtual environment
+---
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+## 2. Configure Environment Variables
+
+Create a `.env` file in the root directory using `.env.example`.
+
+Then create another `.env` inside the `frontend/` directory:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8080
 ```
 
-### 3. Install dependencies
+---
 
-```powershell
-pip install -r requirements.txt
-```
+## 3. Start Infrastructure Services
 
-### 4. Create environment file
+Ensure Docker Desktop is running.
 
-Copy `.env.example` to `.env` and update values if required.
-
-```powershell
-copy .env.example .env
-```
-
-### 5. Start Docker services
-
-```powershell
+```bash
 docker compose up -d
 ```
 
-### 6. Run database migrations
+Verify active containers:
 
-```powershell
+```bash
+docker compose ps
+```
+
+Expected services:
+
+- PostgreSQL
+- Redis
+- Qdrant
+
+---
+
+## 4. Install Backend Dependencies
+
+```bash
+python -m venv .venv
+```
+
+### Windows PowerShell
+
+```bash
+.\.venv\Scripts\Activate.ps1
+```
+
+### Install Requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run Database Migrations
+
+```bash
 alembic upgrade head
 ```
 
-### 7. Set up LangGraph checkpoint tables
+### Initialize LangGraph Checkpoint Tables
 
-```powershell
+```bash
 python -m app.db.setup_langgraph_checkpoints
 ```
 
-### 8. Start FastAPI
+---
 
-```powershell
-python -m uvicorn app.main:app --reload
+## 5. Launch Runtime Services
+
+### Terminal 1 — FastAPI Server
+
+```bash
+.\.venv\Scripts\Activate.ps1
+
+python -m uvicorn app.main:app --reload --port 8080
 ```
 
-### 9. Start Celery worker
+---
 
-```powershell
+### Terminal 2 — Celery Workers
+
+```bash
+.\.venv\Scripts\Activate.ps1
+
 celery -A app.workers.celery_app:celery_app worker --loglevel=info --pool=solo
 ```
 
-### 10. Open Swagger UI
+---
 
-```text
-http://127.0.0.1:8000/docs
+### Terminal 3 — React Frontend
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
 ```
 
 ---
 
-## Security and Governance Notes
-
-- Raw uploaded files are stored separately.
-- Cleaned text is stored separately.
-- Raw PII is not indexed into Qdrant.
-- Audit logs do not store actual PII values.
-- Conflict documents require HITL approval before indexing.
-- LangGraph state is persisted in PostgreSQL.
-- Only approved cleaned content enters the Qdrant Gold Collection.
-- External LLM calls are not required in the current system.
-
----
-
-## Project Roadmap
+# Roadmap
 
 ```text
-Phase 1: Backend foundation
-Status: Completed
-
-Phase 2: Document upload and Celery processing
-Status: Completed
-
-Phase 3: PII detection, redaction, and audit logs
-Status: Completed
-
-Phase 4: Qdrant Gold Collection and conflict detection
-Status: Completed
-
-Phase 5: PostgreSQL checkpointed HITL workflow
-Status: Completed
-
-Phase 6: Chunk-level RAG-ready indexing
-Status: In Progress
-
-Phase 7: Multi-format extraction
-Status: Planned
-
-Phase 8: Retrieval-based RAG answer generation
-Status: Planned
-
-Phase 9: Dashboard and UI
-Status: Planned
-
-Phase 10: Production testing and deployment
-Status: Planned
+Phase 1  -> Backend Architecture Foundation                ✅ Completed
+Phase 2  -> Redis Queue + Upload Pipeline                  ✅ Completed
+Phase 3  -> Automated PII Scrubbing                        ✅ Completed
+Phase 4  -> Qdrant Conflict Validation                     ✅ Completed
+Phase 5  -> LangGraph PostgreSQL Checkpointing             ✅ Completed
+Phase 6  -> Chunk-Level Vector Architecture                ✅ Completed
+Phase 7  -> React Governance Dashboard                     ✅ Completed
+Phase 8  -> Multi-Format Extraction (PDF/CSV)              🔄 Planned
+Phase 9  -> Retrieval Synthesis & Generation Layer         🔄 Planned
 ```
 
 ---
 
-## Recruiter Summary
+# Security & Governance Principles
 
-This project demonstrates backend engineering, data engineering, and AI engineering skills through a governance-first AI document pipeline.
+## Separation of Raw Assets
 
-It combines FastAPI, PostgreSQL, Celery, Redis, LangGraph, Qdrant, local Hugging Face embeddings, audit logging, and human-in-the-loop workflow design.
-
-The system is designed to safely prepare enterprise documents for future RAG applications while protecting sensitive information and maintaining approval traceability.
+Raw uploaded content is isolated from production retrieval systems.
 
 ---
 
-## Author
+## PII Isolation Enforcement
 
-Built by [Md Shahrul Zakaria](https://github.com/bringerofdarkness)
+Unredacted sensitive strings are never indexed into vector collections.
+
+---
+
+## Deterministic Checkpoint Recovery
+
+LangGraph execution states persist using database-backed thread identifiers for reliable recovery.
+
+---
+
+## Trusted Knowledge Boundaries
+
+Only approved assets inside trusted collections are searchable through retrieval endpoints.
+
+---
+
+# Why This Project Matters
+
+Most AI portfolio projects stop at:
+
+```text
+Upload PDF -> Embed -> Chatbot
+```
+
+ADGS focuses on the harder production problem:
+
+> How do you govern AI knowledge systems safely at enterprise scale?
+
+This project demonstrates practical engineering across:
+
+- asynchronous distributed systems
+- AI orchestration pipelines
+- governance-first architecture
+- vector infrastructure
+- backend engineering
+- workflow checkpointing
+- compliance-aware retrieval systems
+- stateful orchestration
+- enterprise auditability
+
+Instead of relying on thin wrappers or simplified demos, the platform was engineered like an internal enterprise system.
+
+---
+
+# Author
+
+## Md Shahrul Zakaria
+
+Software Engineering & Data Science
+
+- GitHub: [@bringerofdarkness](https://github.com/bringerofdarkness)
+
+---
+
+# Final Notes
+
+ADGS is not designed as a generic chatbot backend.
+
+It is designed as a governance infrastructure layer that sits *before* enterprise AI systems — protecting retrieval pipelines from unsafe, contradictory, or non-compliant data before it ever reaches production vector environments.
+
+That separation is the entire philosophy behind the project.
+
+---
