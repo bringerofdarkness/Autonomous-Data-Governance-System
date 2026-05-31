@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str
+    PROJECT_NAME: str = "Autonomous Data Governance System"
     ENVIRONMENT: str
     UPLOAD_DIR: str = "storage/uploads"
     CLEANED_TEXT_DIR: str = "storage/cleaned"

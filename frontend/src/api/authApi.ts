@@ -1,4 +1,4 @@
-﻿const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+﻿const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080";
 
 export type LoginResponse = {
   access_token: string;
@@ -7,7 +7,6 @@ export type LoginResponse = {
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
   const formData = new URLSearchParams();
-
   formData.append("username", username);
   formData.append("password", password);
 
@@ -21,7 +20,6 @@ export async function login(username: string, password: string): Promise<LoginRe
 
   if (!response.ok) {
     const errorText = await response.text();
-
     throw new Error(
       errorText || `Login failed with status ${response.status}`,
     );

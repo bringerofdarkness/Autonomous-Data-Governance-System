@@ -3,14 +3,14 @@ import "./App.css";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DocumentDetailPage } from "./pages/DocumentDetailPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
+import { RagSearchPage } from "./pages/RagSearchPage"; // NEW: Mounted Search Page
 
-type Page = "dashboard" | "documents" | "document-detail";
+// FIXED: Added "rag-search" option to the page layout type state boundaries
+type Page = "dashboard" | "documents" | "document-detail" | "rag-search";
 
 function App() {
   const [page, setPage] = useState<Page>("dashboard");
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
-    null,
-  );
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   function openDocumentDetail(documentId: string) {
     setSelectedDocumentId(documentId);
@@ -34,9 +34,7 @@ function App() {
 
         <nav className="sidebar-nav">
           <button
-            className={
-              page === "dashboard" ? "sidebar-link active" : "sidebar-link"
-            }
+            className={page === "dashboard" ? "sidebar-link active" : "sidebar-link"}
             onClick={() => setPage("dashboard")}
           >
             <span>Overview</span>
@@ -54,6 +52,15 @@ function App() {
             <span>Documents</span>
             <small>Governance records</small>
           </button>
+
+          {/* NEW: Navigation Tab for the Asynchronous RAG Query Hub */}
+          <button
+            className={page === "rag-search" ? "sidebar-link active" : "sidebar-link"}
+            onClick={() => setPage("rag-search")}
+          >
+            <span>RAG Intelligence</span>
+            <small>Secure query engine</small>
+          </button>
         </nav>
 
         <div className="sidebar-footer">
@@ -67,11 +74,10 @@ function App() {
           <div>
             <p className="page-kicker">Enterprise AI Governance</p>
             <h1>
-              {page === "dashboard"
-                ? "Governance Dashboard"
-                : page === "documents"
-                  ? "Document Governance"
-                  : "Document Detail"}
+              {page === "dashboard" && "Governance Dashboard"}
+              {page === "documents" && "Document Governance"}
+              {page === "document-detail" && "Document Detail"}
+              {page === "rag-search" && "RAG Synthesis Engine"}
             </h1>
           </div>
 
@@ -93,6 +99,9 @@ function App() {
             onBack={backToDocuments}
           />
         )}
+
+        {/* NEW: Renders the secure synthesis query view layout cleanly */}
+        {page === "rag-search" && <RagSearchPage />}
       </main>
     </div>
   );

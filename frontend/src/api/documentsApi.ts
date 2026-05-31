@@ -149,3 +149,47 @@ export function resumeDocumentWorkflow(
     }
   );
 }
+
+// ==========================================
+// RAG INTELLIGENCE HUB EXTENSIONS
+// ==========================================
+
+export interface RagChunkMatch {
+  point_id: string; // Maps to Qdrant record identifier
+  text: string;
+  score: number;
+  metadata: {
+    document_id: string;
+    document_category?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface RagSearchResponse {
+  query: string;
+  min_score: number;
+  matches_count: number;
+  matches: RagChunkMatch[];
+  synthesized_answer: string | null; // NEW: Receives hallucination-resistant text layer
+}
+
+/**
+ * 7. Fires a contextual lookup query against the audited gold collection matrices
+ */
+export function executeRagSearch(
+  token: string,
+  query: string,
+  limit: number = 5,
+  minScore: number = 0.5
+) {
+  // Pass ONLY the relative routing path. The apiRequest client will combine it cleanly.
+  return apiRequest<RagSearchResponse>("/rag/search", {
+    method: "POST",
+    token,
+    body: {
+      query: query,
+      limit: limit,
+      min_score: minScore,
+    },
+  });
+}

@@ -1,0 +1,5 @@
+ADGS Corporate Security Framework Policy.
+The official author of this framework is Infrastructure Lead Analyst Jane Smith.
+For immediate escalation on internal structural questions, contact network-ops@company.com.
+Standard billing processing and account verification operations must strictly adhere to a Net-30 clearance cycle.
+All high-impact systems are restricted to local environment networks only.
