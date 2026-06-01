@@ -9,11 +9,14 @@ settings = get_settings()
 
 class LLMGenerationService:
     def __init__(self):
-        self.provider = getattr(settings, "LLM_PROVIDER", "gemini").lower()
+        self.provider = settings.LLM_PROVIDER.lower()
         self.gemini_api_key = getattr(settings, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
-        self.gemini_model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
-        self.ollama_url = getattr(settings, "OLLAMA_URL", "http://localhost:11434/api/chat")
-        self.ollama_model = getattr(settings, "OLLAMA_MODEL", "llama3")
+        self.gemini_model = settings.GEMINI_MODEL
+        self.ollama_url = settings.OLLAMA_URL
+        self.ollama_model = settings.OLLAMA_MODEL
+        
+        self.max_tokens = getattr(settings, "LLM_MAX_TOKENS", 1024)
+        self.timeout = getattr(settings, "LLM_REQUEST_TIMEOUT", 30)
 
         self.genai_client = None
         if self.provider == "gemini" and self.gemini_api_key:
@@ -73,7 +76,7 @@ class LLMGenerationService:
         config = types.GenerateContentConfig(
             system_instruction=system_prompt,
             temperature=0.0,
-            max_output_tokens=1024
+            max_output_tokens=self.max_tokens
         )
         
         response = self.genai_client.models.generate_content(
@@ -109,7 +112,7 @@ class LLMGenerationService:
             }
         }
         
-        response = requests.post(self.ollama_url, json=payload, timeout=30)
+        response = requests.post(self.ollama_url, json=payload, timeout=self.timeout)
         response.raise_for_status()
         result_text = response.json().get("message", {}).get("content", "").strip()
         

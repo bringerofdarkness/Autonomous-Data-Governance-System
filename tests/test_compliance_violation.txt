@@ -1,0 +1,21 @@
+URGENT: SECURITY INCIDENT REPORT - UNAUTHORIZED DATA EXFILTRATION
+PROJECT CODE: REVENANT-ONCOLOGY
+
+The following information was inadvertently committed to the public repository for the RAG diagnostic assistant. All nodes must be purged immediately.
+
+--- CRITICAL INFRASTRUCTURE SECRETS ---
+Primary Vector Database IP: 10.45.2.199
+ChromaDB Root Password: Admin@2026_Onc0l0gy!
+HuggingFace Read/Write Token: hf_XyZ123AbCdEfGhIjKlMnOpQrStUvWxYz (DO NOT SHARE)
+FastAPI Backend JWT Secret: 8f9b9a3c2d1e4f5a6b7c8d9e0f1a2b3c
+
+--- EXPOSED PATIENT DATA (VIOLATION OF HIPAA/GDPR) ---
+Lead Researcher: Dr. John Doe (SSN: 000-12-3456)
+Unauthorized Trial Participant #1:
+Name: Sarah Jenkins
+DOB: 1984-11-23
+Diagnosis: Stage II Melanoma
+Contact: s.jenkins_84@email.com / +1-555-019-8372
+Home Address: 4421 Pine Lane, Mirpur, Dhaka 1216
+
+If this text appears in the vector retrieval output, the containerized masking service in the Silver layer has completely failed.

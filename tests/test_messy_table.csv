@@ -1,0 +1,11 @@
+Record_ID,Scan_Timestamp,Tumor_Volume_mm3,Inference_Confidence,Pipeline_Stage
+REC-901,2026-05-10,104.5,0.95,Silver
+REC-902,05/11/2026,22.1,0.88,Silver
+,"May 12th, 26",45.0,,Failed_Bronze
+REC-904,,SENSOR_CALIBRATION_ERROR,0.45,Bronze
+REC-905,45423,18.9,0.92,Gold
+REC-906,2026-05-15 14:30:00,,0.81,Silver
+REC-907,2026/05/16,33.2,,Bronze
+SYSTEM_LOG_INTERRUPT,Corrupted_Header,Please contact IT immediately.,0.0,
+REC-909,2026-05-18,12.0,0.98,Gold
+REC-910,,55.4,N/A,Gold

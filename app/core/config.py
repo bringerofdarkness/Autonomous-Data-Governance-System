@@ -1,7 +1,7 @@
 from functools import lru_cache
+from typing import Optional # Corrected import
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Autonomous Data Governance System"
@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_URL: str
 
+    LLM_PROVIDER: str
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: Optional[str] = None # Added this line
+    OLLAMA_URL: str
+    OLLAMA_MODEL: str
+
     QDRANT_HOST: str
     QDRANT_PORT: int
     QDRANT_URL: str
@@ -43,7 +49,6 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
-
 
 @lru_cache
 def get_settings() -> Settings:

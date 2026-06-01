@@ -1,0 +1,64 @@
+{
+    "pipeline_execution": {
+        "run_id": "dag_run_99482",
+        "timestamp": "2026-06-01T08:14:32Z",
+        "architecture": "Medallion",
+        "stages": {
+            "bronze_ingestion": {
+                "status": "success",
+                "source": "hospital_pacs_01",
+                "raw_metadata": {
+                    "dicom_headers": {
+                        "modality": "Dermoscopy",
+                        "resolution": [
+                            4096,
+                            4096
+                        ],
+                        "color_space": "RGB",
+                        "device_settings": {
+                            "exposure": 15,
+                            "lens": "Macro_100mm",
+                            "calibration_profile": {
+                                "white_balance": "auto",
+                                "gamma_correction": 2.2,
+                                "sensor_diagnostics": {
+                                    "temperature_celsius": 34.2,
+                                    "voltage_drop": false
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "silver_transformation": {
+                "status": "success",
+                "pii_scrubbing": {
+                    "engine": "dockerized_masking_v1.2",
+                    "entities_removed": [
+                        "PatientName",
+                        "DOB",
+                        "PhysicianName"
+                    ]
+                }
+            },
+            "gold_inference": {
+                "status": "completed",
+                "model": "Ensemble_ResNet50_Oncology",
+                "results": {
+                    "classifications": [
+                        {
+                            "lesion_id": "L-883",
+                            "prediction": "Atypical Nevus",
+                            "confidence": 0.87,
+                            "focal_loss_metrics": {
+                                "alpha": 0.25,
+                                "gamma": 2.0,
+                                "computed_loss": 0.043
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
