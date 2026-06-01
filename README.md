@@ -54,6 +54,27 @@ ADGS acts as an intelligent security guard sitting between your employees and yo
 
 **The Result:** Your company's AI remains safe, compliant, and strictly accurate. You get the power of AI, without losing control of your data.
 
+## System UI & Dashboards
+
+Here is a look at the ADGS Enterprise Interface, demonstrating the transition from system overview, to document governance, and finally to secure AI querying.
+
+### 1. Governance Overview Dashboard
+A live operational view of the system, monitoring sensitive document intake and overall governance activity.
+
+![Governance Overview Dashboard](assets/overview.png)
+
+### 2. Document Governance Registry
+The central control room where administrators can upload new corporate assets, filter documents by risk level, and review detected PII or data contradictions before they enter the knowledge base.
+
+![Document Governance Registry](assets/documents.png)
+
+### 3. RAG Synthesis Engine (Intelligence Hub)
+The secure query interface. Employees ask questions here, and the system answers using exclusively the approved, hallucination-free "Gold Collection" data.
+
+![RAG Synthesis Engine](assets/rag.png)
+
+
+
 ---
 
 # Table of Contents
