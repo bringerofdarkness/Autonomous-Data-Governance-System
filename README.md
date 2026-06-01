@@ -49,6 +49,8 @@ The platform combines asynchronous distributed architecture with governance-awar
 - [Document Lifecycle](#document-lifecycle)
 - [API Blueprint](#api-blueprint)
 - [Local Development Setup](#local-development-setup)
+- [Testing & Quality Assurance](#testing--quality-assurance) 
+
 - [Roadmap](#roadmap)
 - [Security & Governance Principles](#security--governance-principles)
 - [Why This Project Matters](#why-this-project-matters)
@@ -286,7 +288,7 @@ for downstream retrieval systems.
 | Frontend | React + TypeScript + Vite |
 | Authentication | JWT + RBAC |
 | Containerization | Docker Compose |
-
+| Testing & QA | pytest, pytest-mock, httpx |
 ---
 
 # Multi-Format Document Processing
@@ -651,6 +653,18 @@ npm run dev
 ```
 
 ---
+# Testing & Quality Assurance
+
+ADGS includes a comprehensive testing suite to ensure enterprise-grade stability. The test environment dynamically bypasses security layers and database commits to test core logic in isolation without risking the production database state.
+
+## Running Tests
+
+Activate your virtual environment and run the test suite using `pytest`:
+
+```bash
+pytest tests/ -v -s
+
+---
 
 # Roadmap
 
@@ -663,7 +677,8 @@ Phase 5  -> LangGraph PostgreSQL Checkpointing               ✅ Completed
 Phase 6  -> Chunk-Level Vector Ingestion                     ✅ Completed
 Phase 7  -> Multi-Format Parser Integration                  ✅ Completed
 Phase 8  -> Integrated React Governance Dashboard            ✅ Completed
-Phase 9  -> Retrieval Synthesis & Generation Layers          🔄 Planned
+Phase 9  -> Retrieval Synthesis & Generation Layers          🚧 In Progress
+Phase 10 -> Comprehensive Pytest Coverage                    ✅ Completed
 ```
 
 ---
