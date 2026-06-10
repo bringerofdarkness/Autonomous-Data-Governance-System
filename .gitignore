@@ -42,3 +42,6 @@ Thumbs.db
 # Model/cache files
 .cache/
 huggingface/
+
+# Migration backups
+app_fastapi_backup/

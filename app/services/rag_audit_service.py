@@ -1,13 +1,9 @@
-﻿from typing import Any
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.rag_search_audit_log import RagSearchAuditLog
-from app.models.user import User
+from app.models import RagSearchAuditLog, User
 
 
-async def create_rag_search_audit_log(
-    db: AsyncSession,
+def create_rag_search_audit_log(
     current_user: User,
     query: str,
     result_limit: int,
@@ -28,8 +24,9 @@ async def create_rag_search_audit_log(
         if match.get("point_id")
     ]
 
-    audit_log = RagSearchAuditLog(
-        actor_user_id=current_user.id,
+    # Use synchronous Django ORM creation
+    audit_log = RagSearchAuditLog.objects.create(
+        actor_user=current_user,
         query=query,
         result_limit=result_limit,
         min_score=min_score,
@@ -52,8 +49,5 @@ async def create_rag_search_audit_log(
             ]
         },
     )
-
-    db.add(audit_log)
-    await db.flush()
 
     return audit_log
