@@ -1,58 +1,110 @@
-# Autonomous Data Governance System (ADGS) v2.0
-A production-grade, asynchronous semantic firewall and compliance gatekeeper for Retrieval-Augmented Generation (RAG) pipelines.
+# Autonomous Data Governance System (ADGS)
+
+<p align="center">
+  <b>
+    Production-Grade Asynchronous Semantic Firewall, Compliance Gatekeeper,
+    and Human-in-the-Loop AI Governance Pipeline for Enterprise RAG Systems
+  </b>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Django-REST%20Framework-092E20?logo=django&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-Vite%20%26%20TS-61DAFB?logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/PostgreSQL-Metadata%20Core-4169E1?logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Qdrant-Vector%20Store-DC244C" />
+  <img src="https://img.shields.io/badge/Redis-Message%20Broker-DC382D?logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Celery-Task%20Queue-3771A1?logo=celery&logoColor=white" />
+  <img src="https://img.shields.io/badge/LangGraph-Workflow%20Orchestrator-1C3C3C" />
+  <img src="https://img.shields.io/badge/Google--Gemini-LLM%20Synthesis-blue" />
+  <img src="https://img.shields.io/badge/SentenceTransformers-all--MiniLM--L6--v2-yellow" />
+  <img src="https://img.shields.io/badge/Docker-Services-2496ED?logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Pytest-Tests-0A9EDC?logo=pytest&logoColor=white" />
+</p>
+
+---
+---
+
+# 📺 Interface Demonstration & Visual Showcases
+
+> [!NOTE]  
+> **Corporate Security & Compliance Panel:** ADGS features an interactive React-based dashboard that monitors incoming file streams, lets administrators inspect flagged PII and contradictions, and enables manual vector indexing overrides.
+
+<p align="center">
+  <b>1. Governance Overview Dashboard</b><br/>
+  <img src="assets/overview.png" alt="Governance Overview Dashboard" width="90%" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 20px;" />
+</p>
+
+<p align="center">
+  <b>2. Document Governance Registry</b><br/>
+  <img src="assets/documents.png" alt="Document Governance Registry" width="90%" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); margin-bottom: 20px;" />
+</p>
+
+<p align="center">
+  <b>3. RAG Synthesis Engine (Intelligence Hub)</b><br/>
+  <img src="assets/rag.png" alt="RAG Synthesis Engine" width="90%" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
+</p>
+
+*The visual interface maps to the entire security lifecycle: File Ingestion ➔ Worker Analysis ➔ Admin Review/Pause ➔ Qdrant Vector Commits ➔ Context-Locked Chat.*
 
 ---
 
-## 1. Why ADGS? (The Core Problem & Value Proposition)
+# Table of Contents
 
-Retrieval-Augmented Generation (RAG) is the industry standard for grounding LLMs in corporate data. However, the naive implementation of RAG introduces severe compliance, privacy, and accuracy risks:
-
-```text
-User Upload ➔ Naive Ingestion ➔ Vector Database ➔ Downstream LLM (Exposes Sensitive Data)
-```
-
-Without an intermediate governance layer, organizations risk indexing confidential files directly into shared vector stores. Once contaminated knowledge enters the vector space, it is near-impossible to prevent downstream LLMs from retrieving and exposing it to unauthorized users.
-
-**ADGS solves this** by acting as an intelligent security gatekeeper sitting between raw document ingestion and your vector database. It inspects, sanitizes, audits, and validates all document content *before* it gets vectorized and stored.
-
----
-
-## 2. System Scenarios: Before vs. After ADGS
-
-### Scenario: The Customer Service Chatbot Contamination
-A company integrates an internal AI chatbot to help agents retrieve support policies. An employee accidentally uploads an Excel sheet containing customer names, credit card details, and social security numbers, alongside an outdated corporate policy stating: *"Refunds are valid up to 45 days"* (the current policy only allows 14 days).
-
-#### ❌ WITHOUT ADGS (The Vulnerability)
-1. The spreadsheet is parsed and directly embedded into the vector database.
-2. A customer support agent asks: *"What is our refund window?"*
-3. The LLM retrieves the outdated refund window (45 days) and hallucinated guidelines, leading to financial leakage.
-4. A malicious employee queries: *"Show me the details of customer John Doe."*
-5. The LLM retrieves and outputs the customer's social security number and credit card details directly from the vector store.
-6. **Result:** Compliance violations (GDPR/HIPAA/PCI-DSS), data leakage, and customer trust breakdown.
-
-####  WITH ADGS (The Solution)
-1. The employee uploads the spreadsheet. ADGS immediately intercepts it.
-2. **PII Sanitizer:** The system automatically scans the document, redacting all names, credit cards, and SSNs.
-3. **Conflict Agent:** The system generates embeddings of the document segments, runs a semantic similarity lookup in Qdrant, and flags that the "45-day refund policy" contradicts the existing approved "14-day refund policy."
-4. **Critic Node:** Because conflicts and PII are detected, the system calculates a high risk score, halts the pipeline, and serializes the workflow state into PostgreSQL.
-5. **Human-in-the-Loop (HITL):** The document goes into a `PAUSED` state. The compliance team receives an alert on the admin dashboard, reviews the flagged contradictions and redacted PII, and clicks **REJECT**.
-6. **Result:** The vector database remains clean, secure, and compliant. The dangerous data is blocked at the gate.
+- [Overview](#overview)
+- [Why ADGS? (The Scenario)](#why-adgs-the-scenario)
+- [Key Features & Benefits](#key-features-&-benefits)
+- [Supported Formats & Extraction Strategies](#supported-formats-&-extraction-strategies)
+- [Pre-Build Conception & System Design](#pre-build-conception-&-system-design)
+- [System Architecture Overview](#system-architecture-overview)
+- [Codebase Map & File Responsibilities](#codebase-map-&-file-responsibilities)
+- [Most Challenging Parts (The Engineering Hurdles)](#most-challenging-parts-the-engineering-hurdles)
+- [Learnings & Takeaways](#learnings-&-takeaways)
+- [Local Development Setup](#local-development-setup)
+- [Contributing to the Project](#contributing-to-the-project)
+- [Future Roadmap & Next Steps](#future-roadmap-&-next-steps)
+- [Author & Contact](#author-&-contact)
 
 ---
 
-## 3. Key Benefits
+# Overview
 
-* **PII Leakage Prevention:** Automatically sanitizes sensitive identifiers (emails, phone numbers, SSNs, credit cards) before they are stored in the vector database.
-* **Semantic Integrity & Accuracy:** Scans new documents for contradictions against the existing knowledge base, preventing LLM hallucinations caused by conflicting information.
-* **Human-in-the-Loop Oversight:** Pauses high-risk workflows for administrator review, giving compliance teams ultimate control over what data the AI is trained on.
-* **Asynchronous Web Scalability:** Offloads heavy processing workloads to background queues, keeping the web API fast and highly responsive.
-* **Immutability of Audit Trails:** Tracks every document's lifecycle through detailed relational logs, facilitating security audits and SOC2 compliance.
+The **Autonomous Data Governance System (ADGS)** is an enterprise-focused semantic firewall built to secure Retrieval-Augmented Generation (RAG) databases. Rather than naive ingestion systems that chunk and vectorize raw corporate uploads immediately, ADGS intercepts, audits, sanitizes, and evaluates documents within a distributed task-queue architecture. Powered by a stateful cyclical **LangGraph** workflow and backed by **Celery/Redis**, ADGS halts high-risk files (PII exposure, semantic contradictions) for human review before vectorization occurs.
 
 ---
 
-## 4. Supported Formats & Extraction Strategies
+# Why ADGS? (The Scenario)
 
-ADGS doesn't treat documents as flat text strings. It employs format-specific parsing strategies to maintain semantic integrity:
+### Before ADGS: The Customer Service Contamination
+Suppose a company uses an internal RAG chatbot for customer support. An employee uploads a spreadsheet with customer names, phone numbers, and SSNs, alongside an old draft stating: *"Refunds are valid up to 45 days"* (the active company policy is 14 days).
+
+* **The Exposure:** The spreadsheet goes directly into the vector store.
+* **The Exploit:** A regular user asks: *"What is customer John Doe's phone number?"* The chatbot retrieves the raw phone number from the vector store and outputs it. A support agent asks: *"What is our refund window?"* The chatbot retrieves the old 45-day policy, causing financial leakage.
+* **Result:** Compliance violations (GDPR/HIPAA), data leaks, and brand trust erosion.
+
+### After ADGS: The Solution
+1. **Upload & Intercept:** The employee uploads the spreadsheet. ADGS intercepts it, saving the raw asset in private storage.
+2. **PII Sanitizer:** The system scans the document, redacting all names, phone numbers, and SSNs.
+3. **Conflict Agent:** The system generates embeddings of the document segments, queries Qdrant to search for semantic overlaps, and flags that the "45-day refund window" contradicts the existing approved "14-day refund policy."
+4. **Critic Node:** Calculating a high risk score, the workflow halts itself and serializes its state into PostgreSQL.
+5. **Human-in-the-Loop (HITL):** An admin reviews the flagged contradictions and redacted PII on the dashboard, clicking **REJECT**.
+6. **Result:** The vector database remains clean and compliant. The dangerous data never enters the vector index.
+
+---
+
+# Key Features & Benefits
+
+* **PII Leakage Prevention:** Automatically redacts sensitive identifiers (emails, phone numbers, SSNs, IDs) before vectorization.
+* **Semantic Integrity Audits:** Scans new documents for contradictions against existing knowledge to prevent hallucination.
+* **Human-in-the-Loop (HITL) Gate:** Pauses high-risk workflows for administrator approval using database-backed checkpoints.
+* **Asynchronous Web Scalability:** Decouples heavy AI workloads from web workers to maintain high web API responsiveness.
+* **Immutability of Audit Trails:** Records state changes and admin decisions in PostgreSQL for security compliance.
+
+---
+
+# Supported Formats & Extraction Strategies
+
+ADGS uses specialized adapters to extract text from different file structures without losing relational meaning:
 
 | Format | Parsing Engine | Ingestion Strategy | Use Case |
 | :--- | :--- | :--- | :--- |
@@ -65,90 +117,53 @@ ADGS doesn't treat documents as flat text strings. It employs format-specific pa
 
 ---
 
-## 5. Target Users & Stakeholders
-
-* **AI Engineers & Architects:** Developers looking for a secure, audited vector ingestion pipeline to keep their RAG chatbots accurate and hallucination-free.
-* **Information Security Officers (CISOs):** Compliance leads who need to prevent data leakage and ensure GDPR, HIPAA, or PCI-DSS requirements are met in corporate LLM applications.
-* **Document Registrars & Admins:** Operators who upload, categorize, review, and approve corporate knowledge bases on a day-to-day basis.
-
----
-
-## 6. How I Thought About & Planned the System
+# Pre-Build Conception & System Design
 
 ### Pre-Building Ideation (The Design Philosophy)
-Before coding the project, I established a set of core principles:
-1. **AI Ingest is a Database Write:** Just as we validate user schemas and sanitize SQL inputs in a REST API, we must validate semantic meaning and sanitize PII in AI data pipelines. Ingest must be separate from retrieval.
-2. **State Isolation:** A vector database is production infrastructure. It should only store "Gold Standard" knowledge. Data in intermediate states must be isolated.
-3. **State Persistence & Re-entry:** A human review process requires workflows to pause and wait. To scale this, the workflow state must be serialized to a physical database (PostgreSQL) and re-instantiated upon administrator approval.
+Before writing the first line of code, the system was designed around three architectural constraints:
+1. **AI Ingest is an Untrusted Write Operation:** In classic web development, we never run raw SQL queries from client input without sanitizing them. We must treat document uploads for AI ingestion with the same suspicion. Every file must pass through a strict semantic and structural sanitization pipeline.
+2. **Heavy Computations Must Be Decoupled:** Parsing large documents, running local transformer embeddings, searching vectors, and invoking LLMs are computationally heavy operations. Running these synchronously on the web-request thread blocks the server. The architecture had to run asynchronously using background workers.
+3. **State Integrity Across Interruptions:** Because human approval is required for high-risk files, the system needed a way to pause mid-workflow, serialize its execution memory, and resume cleanly without losing context or restarting the pipeline.
 
-### Project Planning Roadmap
+### Planning the Migration (V1 to V2)
 * **V1 Prototype (FastAPI):** Built a lightweight, async API using FastAPI, SQLAlchemy Async, and a basic regex PII scrubber. Focus was on building the extraction and vector lookup mechanics.
 * **V2 Production Migration (Django + LangGraph + Celery):** Migrated to Django and DRF to gain stable ORM transactions, secure migrations, and a ready-made administrative interface (Django Admin). Integrated Celery for queue offloading, and rebuilt the pipeline using a cyclical state machine in LangGraph to handle human-in-the-loop checkpoints.
 
 ---
 
-## 7. Technology Stack
+# System Architecture Overview
 
-* **Backend Gateway:** Django REST Framework (DRF) — handles request parsing, authentication, and database writes.
-* **Workflow Orchestrator:** LangGraph — manages cyclical pipelines, nodes, conditional edges, and state serialization.
-* **State Checkpointer:** `PostgresSaver` — persists the active state of LangGraph threads directly into PostgreSQL.
-* **Background Worker Queue:** Celery + Redis — processes document loading, scrubbing, vector embedding, and LLM calls.
-* **Vector Store:** Qdrant — houses vector embeddings in the `adgs_gold_documents` namespace.
-* **Local Embeddings:** SentenceTransformers (`all-MiniLM-L6-v2`) — generates dense 384-dimensional vector representations locally.
-* **Cloud LLM synthesis:** Google Gemini API (`gemini-2.5-flash`) — powers secure RAG query answering.
-* **Frontend Dashboard:** React (TypeScript) + Vite — interface for document uploads, registries, and chat retrieval.
-
----
-
-## 8. System Architecture Diagram
-
-```mermaid
-flowchart TD
-    %% Client Interfaces
-    User[React Ingestion & Chat Client] <-->|API Calls| DjangoAPI[Django REST Framework Gateway]
-    Admin[Django Admin Console] <-->|Review & Approve| DjangoAPI
-
-    %% Database & Queue
-    DjangoAPI <-->|Write Metadata & Logs| PostgresDB[(PostgreSQL DB)]
-    DjangoAPI -->|Enqueue Task| RedisBroker[Redis Task Queue]
-
-    %% Asynchronous Worker Container
-    RedisBroker -->|Dequeue| CeleryWorker[Celery Asynchronous Worker]
-    
-    subgraph Celery Worker Environment
-        CeleryWorker -->|Compiles & Invokes| LangGraph[LangGraph State Machine]
-        
-        LangGraph -->|1. Load Text| NodeLoader[text_loader_node]
-        LangGraph -->|2. Categorize| NodeCat[categorizer_node]
-        LangGraph -->|3. Scrub PII| NodeScrub[pii_scrubber_node]
-        LangGraph -->|4. Audit Conflicts| NodeConflict[conflict_agent_node]
-        LangGraph -->|5. Evaluate Risk| NodeCritic[critic_node]
-        
-        LangGraph <-->|State Snapshot| PostgresCheckpointer[(PostgresSaver Checkpoints)]
-        
-        NodeCritic -->|High Risk Flag| NodeHITL[hitl_review_node]
-        NodeCritic -->|Low Risk Flag| NodeAutoIndex[Auto-Approve Gate]
-        
-        NodeHITL -->|Pauses Graph| PausedDB[PAUSED Status in Postgres]
-    end
-
-    %% Resume Action
-    Admin -.->|Approve Callback| DjangoAPI
-    DjangoAPI -->|Resume Graph Command| LangGraph
-    
-    %% Output
-    LangGraph -->|Approved Vectorization| Indexer[Document Indexing Service]
-    Indexer -->|Generate Dense Embeddings| LocalTransformer[SentenceTransformer]
-    LocalTransformer -->|Upsert Chunks| QdrantDB[(Qdrant Vector DB)]
-
-    %% Secure Retrieval
-    DjangoAPI -->|Semantic Search| QdrantDB
-    DjangoAPI <-->|Context-Anchored Synthesis| GeminiAPI[Google Gemini API]
+```text
+[ User Ingestion & Chat Client ] <--> [ Django REST Framework Gateway ]
+                                                    │
+                                   ┌────────────────┴────────────────┐
+                                   ▼                                 ▼
+                     [ PostgreSQL Database ]             [ Redis Task Queue Broker ]
+                   - Relational metadata                             │
+                   - LangGraph Checkpoints                           ▼
+                                                       [ Celery Async Workers ]
+                                                                     │
+                                                                     ▼
+                                                      [ LangGraph Workflows ]
+                                                       - text_loader_node
+                                                       - categorizer_node
+                                                       - pii_scrubber_node
+                                                       - conflict_agent_node
+                                                       - critic_node
+                                                       - hitl_review_node
+                                                                     │
+                                                       ┌─────────────┴─────────────┐
+                                                       ▼ (If Approved)             ▼ (If Flagged)
+                                              [ Indexing Service ]            [ PAUSED State ]
+                                                       │                               │
+                                                       ▼                               ▼
+                                             [ Qdrant Vector DB ]            [ Admin Panel Review ]
+                                             (Gold Collection)
 ```
 
 ---
 
-## 9. Codebase Map & File Responsibilities
+# Codebase Map & File Responsibilities
 
 Below is a map of the important files in the repository and what they do:
 
@@ -181,23 +196,23 @@ Below is a map of the important files in the repository and what they do:
 
 ---
 
-## 10. Most Challenging Parts (The Engineering Hurdles)
+# Most Challenging Parts (The Engineering Hurdles)
 
 ### 1. LangGraph Checkpointing in a Distributed Celery Context
-**The Challenge:** LangGraph's human-in-the-loop pause requires serializing the execution state into a database. When running inside Celery background tasks, managing database connections across separate worker processes is tricky.
-**The Solution:** I implemented the `PostgresSaver` checkpointer using a raw `psycopg` connection, passing it to the graph compilation stage. When the Critic Node pauses, the state is safely saved in PostgreSQL. Once an admin hits `/resume`, a new Celery task is spawned, loads the thread ID from the DB checkpointer, and picks up exactly where the workflow left off.
+* **The Challenge:** LangGraph's human-in-the-loop pause requires serializing the execution state into a database. When running inside Celery background tasks, managing database connections across separate worker processes is tricky.
+* **The Solution:** I implemented the `PostgresSaver` checkpointer using a raw `psycopg` connection, passing it to the graph compilation stage. When the Critic Node pauses, the state is safely saved in PostgreSQL. Once an admin hits `/resume`, a new Celery task is spawned, loads the thread ID from the DB checkpointer, and picks up exactly where the workflow left off.
 
 ### 2. Semantic Contradiction Mapping (Conflict Agent)
-**The Challenge:** Determining if a document contradicts existing information without causing false positives. For example, updating a phone number is an update, not necessarily a dangerous contradiction, but changing a legal policy is.
-**The Solution:** The Conflict Agent generates dense vectors of the new text chunks, queries Qdrant to pull the top 3 semantically closest chunks, and feeds both texts to the Gemini LLM with a specialized system prompt. The model evaluates whether the differences constitute a logical contradiction, flagging them for human review.
+* **The Challenge:** Determining if a document contradicts existing information without causing false positives. For example, updating a phone number is an update, not necessarily a dangerous contradiction, but changing a legal policy is.
+* **The Solution:** The Conflict Agent generates dense vectors of the new text chunks, queries Qdrant to pull the top 3 semantically closest chunks, and feeds both texts to the Gemini LLM with a specialized system prompt. The model evaluates whether the differences constitute a logical contradiction, flagging them for human review.
 
 ### 3. Preserving Layout Meaning in Structural Formats (CSV/JSON/Excel)
-**The Challenge:** Vector databases require text chunks. Pushing raw CSV lines (`John,Doe,34,Admin`) causes the embedding model to lose the connection between values and headers.
-**The Solution:** I built custom parser adapters. CSV/Excel sheets are flattened relationally (e.g., `Row 12 - Name: John Doe, Age: 34, Role: Admin`), while nested JSONs are converted into fully qualified path strings. This keeps the semantic context clean for the vectorizer.
+* **The Challenge:** Vector databases require text chunks. Pushing raw CSV lines (`John,Doe,34,Admin`) causes the embedding model to lose the connection between values and headers.
+* **The Solution:** I built custom parser adapters. CSV/Excel sheets are flattened relationally (e.g., `Row 12 - Name: John Doe, Age: 34, Role: Admin`), while nested JSONs are converted into fully qualified path strings. This keeps the semantic context clean for the vectorizer.
 
 ---
 
-## 11. Learnings & Key Takeaways
+# Learnings & Takeaways
 
 * **Decoupling is Crucial for AI Pipelines:** AI workloads are heavy and slow. Wrapping everything in synchronous API calls causes timeouts and server crashes. Background queueing via Celery is essential for any production-grade AI system.
 * **Input Sanitization Applies to AI:** We must treat unstructured text inputs with the same validation mindset as structured JSON inputs. Protecting the vector store is the only way to build secure corporate RAG systems.
@@ -205,28 +220,7 @@ Below is a map of the important files in the repository and what they do:
 
 ---
 
-## 12. Visualizations & Interface Showcases
-
-*Here is a preview of the ADGS Enterprise Administration Dashboard. You can replace these placeholders with your active screenshots/recordings.*
-
-### 1. Operational Ingestion Dashboard
-The dashboard monitoring incoming file streams, processing logs, and safety flags.
-
-*`[Screenshot Placeholder: dashboard_overview.png]`*
-
-### 2. Document Audit & Approval Registry
-The centralized command room where admins inspect detected PII and review semantic contradictions.
-
-*`[Screenshot Placeholder: document_registry.png]`*
-
-### 3. Secured RAG Interface
-The interface where users interact with the approved and audited knowledge base.
-
-*`[Screenshot Placeholder: rag_chat.png]`*
-
----
-
-## 13. Local Development Setup
+# Local Development Setup
 
 To run ADGS locally, follow these steps to configure your environment, start the databases, apply migrations, and spin up the backend and frontend servers.
 
@@ -362,7 +356,7 @@ The application will be accessible at [http://localhost:5173/](http://localhost:
 
 ---
 
-## 14. Contributing to the Project
+# Contributing to the Project
 
 I welcome contributions to enhance the safety and governance of enterprise AI. To contribute:
 1. **Fork** the repository.
@@ -378,7 +372,7 @@ pytest tests/ -v
 
 ---
 
-## 15. Future Roadmap & Next Steps
+# Future Roadmap & Next Steps
 
 - [ ] **Multi-Tenant Index Isolation:** Support namespaces within Qdrant to segregate documents by department (e.g., HR vectors vs. Finance vectors) with role-based access.
 - [ ] **OCR Engine Integration:** Add an automatic `Tesseract` OCR fallback node to parse scanned images/PDFs that don't have text layers.
@@ -387,7 +381,7 @@ pytest tests/ -v
 
 ---
 
-## 16. Author & Contact
+# Author & Contact
 **Md Shahrul Zakaria**  
 Software Engineering & Data Science  
 * GitHub: [@bringerofdarkness](https://github.com/bringerofdarkness)  
