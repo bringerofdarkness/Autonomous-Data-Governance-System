@@ -44,4 +44,11 @@ Thumbs.db
 huggingface/
 
 # Migration backups
-app_fastapi_backup/
+app_fastapi_backup/
+
+# Local test and helper scripts
+kill_django.py
+test_extractions.py
+test_gemini_response.py
+test_search_debug.py
+

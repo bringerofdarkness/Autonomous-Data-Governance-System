@@ -853,9 +853,14 @@ class RagSearchView(APIView):
             # 2. Extract context for synthesis
             formatted_chunks = [
                 {
-                    "text": m.get("text", ""),
+                    "text": m.get("chunk_text") or m.get("text", ""),
                     "point_id": m.get("point_id") or str(m.get("id", uuid.uuid4())),
-                    "metadata": m.get("metadata", {}),
+                    "metadata": {
+                        "document_id": m.get("document_id"),
+                        "original_filename": m.get("original_filename"),
+                        "document_category": m.get("document_category"),
+                        "risk_score": m.get("risk_score"),
+                    },
                 }
                 for m in matches_list
             ]
@@ -887,8 +892,15 @@ class RagSearchView(APIView):
                         "document_category": m.get("document_category"),
                         "risk_score": m.get("risk_score"),
                         "chunk_index": m.get("chunk_index"),
-                        "chunk_text": m.get("chunk_text") or m.get("text"),
+                        "chunk_text": m.get("chunk_text"),
                         "source": m.get("source"),
+                        "text": m.get("chunk_text") or m.get("text"),
+                        "metadata": {
+                            "document_id": m.get("document_id"),
+                            "original_filename": m.get("original_filename"),
+                            "document_category": m.get("document_category"),
+                            "risk_score": m.get("risk_score"),
+                        },
                     }
                     for m in matches_list
                 ],

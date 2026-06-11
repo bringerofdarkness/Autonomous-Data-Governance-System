@@ -253,6 +253,9 @@ class RagChunkMatchSerializer(serializers.Serializer):
     chunk_index = serializers.IntegerField(allow_null=True)
     chunk_text = serializers.CharField(allow_null=True)
     source = serializers.CharField(allow_null=True)
+    text = serializers.CharField(allow_null=True, required=False)
+    metadata = serializers.JSONField(required=False)
+
 
 
 class RagSearchSerializer(serializers.Serializer):

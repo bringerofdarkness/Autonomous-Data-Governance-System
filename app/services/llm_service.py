@@ -79,15 +79,36 @@ class LLMGenerationService:
             max_output_tokens=self.max_tokens
         )
         
-        response = self.genai_client.models.generate_content(
-            model=self.gemini_model,
-            contents=user_prompt,
-            config=config
-        )
+        import time
+        max_retries = 3
+        backoff = 2.0
+        last_exception = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.genai_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=user_prompt,
+                    config=config
+                )
+                break
+            except Exception as e:
+                last_exception = e
+                # Check for 503 or overload related issues
+                err_msg = str(e).lower()
+                if "503" in err_msg or "unavailable" in err_msg or "resource_exhausted" in err_msg or "overloaded" in err_msg:
+                    if attempt < max_retries - 1:
+                        time.sleep(backoff * (attempt + 1))
+                        continue
+                raise e
+        else:
+            if last_exception:
+                raise last_exception
         
         answer_text = ""
         if response.text:
             answer_text = response.text.strip()
+
         elif response.candidates and response.candidates[0].content.parts:
             answer_text = response.candidates[0].content.parts[0].text.strip()
         else:

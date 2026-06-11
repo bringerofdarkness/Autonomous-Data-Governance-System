@@ -65,10 +65,12 @@ class DocumentMetadataAdmin(admin.ModelAdmin):
     risk_score_badge.short_description = "Risk Score"
 
     def conflict_found_badge(self, obj):
+        from django.utils.safestring import mark_safe
         if obj.conflict_found:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">⚠️ Yes</span>')
-        return format_html('<span style="color: #28a745; font-weight: bold;">✅ No</span>')
+            return mark_safe('<span style="color: #dc3545; font-weight: bold;">⚠️ Yes</span>')
+        return mark_safe('<span style="color: #28a745; font-weight: bold;">✅ No</span>')
     conflict_found_badge.short_description = "Conflict?"
+
 
     # Custom Admin Actions
     def reprocess_documents(self, request, queryset):
